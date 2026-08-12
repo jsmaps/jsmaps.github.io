@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#0f172a"/>
+
+  <!-- Simple map -->
+  <path d="M8 14 L24 9 L40 14 L56 9 V50 L40 55 L24 50 L8 55 Z"
+        fill="#1e293b"
+        stroke="#334155"
+        stroke-width="3"/>
+
+  <!-- Map folds -->
+  <path d="M24 9 V50 M40 14 V55"
+        stroke="#334155"
+        stroke-width="2"
+        fill="none"/>
+
+  <!-- Code symbol -->
+  <path d="M27 22 L18 32 L27 42"
+        fill="none"
+        stroke="#38bdf8"
+        stroke-width="5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <path d="M37 22 L46 32 L37 42"
+        fill="none"
+        stroke="#38bdf8"
+        stroke-width="5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

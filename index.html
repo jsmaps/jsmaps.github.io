@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<meta charset="UTF-8">
+<meta content="width=device-width,initial-scale=1" name="viewport">
+
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+<title>JS Source Map Viewer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+      :root {
+        --bg-main: #090d16;
+        --bg-card: #111827;
+        --bg-card-hover: #1f293d;
+        --border-color: #1f2937;
+        --border-focus: #3b82f6;
+        --text-main: #f3f4f6;
+        --text-muted: #9ca3af;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --secondary: #374151;
+        --secondary-hover: #4b5563;
+        --accent-blue: #60a5fa;
+        --radius: 8px
+      }
+
+      * {
+        box-sizing: border-box
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg-main);
+        color: var(--text-main);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column
+      }
+
+      header {
+        padding: 24px 32px;
+        border-bottom: 1px solid var(--border-color);
+        background: rgba(17, 24, 39, .8);
+        backdrop-filter: blur(12px)
+      }
+
+      header h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -.02em;
+        color: #fff
+      }
+
+      header p {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 14px
+      }
+
+      .container {
+        max-width: 1400px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 28px;
+        flex: 1;
+        display: flex;
+        flex-direction: column
+      }
+
+      .upload-area {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 20px
+      }
+
+      .drop-box {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--radius);
+        padding: 28px 20px;
+        text-align: center;
+        background: var(--bg-card);
+        cursor: pointer;
+        transition: all .2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center
+      }
+
+      .drop-box:hover {
+        border-color: var(--accent-blue);
+        background: var(--bg-card-hover);
+        transform: translateY(-2px)
+      }
+
+      .drop-box strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff
+      }
+
+      .drop-box span {
+        color: var(--text-muted);
+        font-size: 13px
+      }
+
+      input[type=file] {
+        display: none
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 18px
+      }
+
+      .zip-export-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        padding: 3px;
+        border-radius: var(--radius)
+      }
+
+      .zip-input {
+        background: 0 0;
+        border: none;
+        color: var(--text-main);
+        padding: 6px 10px;
+        font-size: 13px;
+        outline: 0;
+        width: 180px
+      }
+
+      .zip-input::placeholder {
+        color: var(--text-muted)
+      }
+
+      button {
+        border: 0;
+        border-radius: var(--radius);
+        padding: 10px 18px;
+        background: var(--primary);
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all .15s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .2)
+      }
+
+      button:hover:not(:disabled) {
+        background: var(--primary-hover);
+        transform: translateY(-1px)
+      }
+
+      button.secondary {
+        background: var(--secondary)
+      }
+
+      button.secondary:hover:not(:disabled) {
+        background: var(--secondary-hover)
+      }
+
+      button:disabled {
+        opacity: .4;
+        cursor: not-allowed;
+        box-shadow: none
+      }
+
+      .status {
+        padding: 12px 18px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        margin-bottom: 20px;
+        color: var(--text-muted);
+        font-size: 13.5px;
+        display: flex;
+        align-items: center
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        height: 650px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: #0d1322;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .3)
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--border-color);
+        background: var(--bg-card);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0
+      }
+
+      .sidebar-title {
+        padding: 16px 18px;
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0
+      }
+
+      .file-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        overflow-y: auto;
+        flex: 1;
+        max-height: 100%
+      }
+
+      .file-item {
+        padding: 10px 18px;
+        border-bottom: 1px solid rgba(31, 41, 55, .5);
+        cursor: pointer;
+        font-size: 13px;
+        word-break: break-all;
+        color: var(--text-main);
+        transition: background .15s ease
+      }
+
+      .file-item:hover {
+        background: var(--bg-card-hover)
+      }
+
+      .file-item.active {
+        background: var(--primary);
+        color: #fff;
+        font-weight: 500
+      }
+
+      .viewer {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: #090d16
+      }
+
+      .viewer-header {
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-card);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px
+      }
+
+      .filename {
+        font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--accent-blue)
+      }
+
+      pre {
+        margin: 0;
+        padding: 20px;
+        flex: 1;
+        overflow: auto;
+        white-space: pre;
+        font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #e2e8f0;
+        background: #090d16
+      }
+
+      .empty {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #4b5563;
+        text-align: center;
+        padding: 40px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: var(--secondary);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 600
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--bg-main)
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--secondary);
+        border-radius: 4px
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--secondary-hover)
+      }
+
+      @media (max-width:800px) {
+        .upload-area {
+          grid-template-columns: 1fr
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+          height: auto
+        }
+
+        .sidebar {
+          height: 250px;
+          border-right: 0;
+          border-bottom: 1px solid var(--border-color)
+        }
+
+        .viewer {
+          min-height: 400px
+        }
+      }
+    </style>
+    <header>
+      <h1>JS Source Map Viewer</h1>
+      <p>Load a JavaScript bundle and its source map to inspect and export mapped source files.
+    </header>
+    <div class=container>
+      <div class=upload-area><label class=drop-box><input id=jsFile accept=.js,.mjs,.cjs,text/javascript type=file><strong>📄 Select JavaScript</strong><span id=jsName>Choose a .js file</span></label><label class=drop-box><input id=mapFile accept=.map,application/json type=file><strong>🗺️ Select Source Map</strong><span id=mapName>Choose a .js.map file</span></label></div>
+      <div class=actions><button id=loadBtn>Load Source Map</button><button id=downloadJsBtn disabled class=secondary>Download JS</button><button id=downloadMapBtn disabled class=secondary>Download .map</button>
+        <div class=zip-export-group><input id=zipNameInput class=zip-input disabled placeholder=Name?><button id=zipBtn disabled>Download ZIP</button></div>
+      </div>
+      <div class=status id=status>Select a JS file and a source map to begin.</div>
+      <div class=layout>
+        <aside class=sidebar>
+          <div class=sidebar-title>Mapped Sources <span id=count class=badge>0</span></div>
+          <ul class=file-list id=fileList></ul>
+        </aside>
+        <main class=viewer>
+          <div class=viewer-header>
+            <div class=filename id=currentFile>No file selected</div><button id=downloadCurrentBtn disabled>Download Current</button>
+          </div>
+          <pre id=code><div class=empty>Select a source from the list to view it.</div></pre>
+        </main>
+      </div>
+    </div>
+    <script>
+      let jsFile = null,
+        mapFile = null,
+        mapData = null,
+        sources = [],
+        currentSource = null;
+
+      function renderFileList() {
+        const o = document.getElementById("fileList");
+        o.innerHTML = "", document.getElementById("count").textContent = sources.length, sources.forEach((e, t) => {
+          const n = document.createElement("li");
+          n.className = "file-item", n.textContent = e.name, null === e.content && (n.title = "This source map does not contain sourcesContent for this file.", n.style.opacity = "0.55"), n.addEventListener("click", () => {
+            document.querySelectorAll(".file-item").forEach(e => e.classList.remove("active")), n.classList.add("active"), showSource(t)
+          }), o.appendChild(n)
+        })
+      }
+
+      function showSource(e) {
+        e = sources[e];
+        currentSource = e, document.getElementById("currentFile").textContent = e.name;
+        const t = document.getElementById("code");
+        if (null === e.content) return t.textContent = "No embedded sourceContent exists for this file.\n\nThe source map only references this source:\n" + e.name, void(document.getElementById("downloadCurrentBtn").disabled = !0);
+        t.textContent = e.content, document.getElementById("downloadCurrentBtn").disabled = !1
+      }
+
+      function downloadBlob(e, t) {
+        const n = URL.createObjectURL(e),
+          o = document.createElement("a");
+        o.href = n, o.download = t, document.body.appendChild(o), o.click(), o.remove(), setTimeout(() => {
+          URL.revokeObjectURL(n)
+        }, 1e3)
+      }
+
+      function cleanFilename(e) {
+        if (!e) return "source.txt";
+        let t = e;
+        return t = t.replace(/^webpack:\/\/\/?/, ""), t = t.replace(/^webpack:\/\//, ""), t = t.replace(/^file:\/\/\/?/, ""), t = t.replace(/^\/+/, ""), t = t.replace(/\.\.(\/|\\)/g, ""), t.trim() || (t = "source.txt"), t
+      }
+
+      function updateButtons() {
+        document.getElementById("downloadJsBtn").disabled = !jsFile, document.getElementById("downloadMapBtn").disabled = !mapFile;
+        var e = 0 < sources.length;
+        document.getElementById("zipBtn").disabled = !e, document.getElementById("zipNameInput").disabled = !e
+      }
+
+      function setStatus(e) {
+        document.getElementById("status").textContent = e
+      }
+      document.getElementById("jsFile").addEventListener("change", e => {
+        jsFile = e.target.files[0], document.getElementById("jsName").textContent = jsFile ? jsFile.name : "Choose a .js file", updateButtons()
+      }), document.getElementById("mapFile").addEventListener("change", e => {
+        mapFile = e.target.files[0], document.getElementById("mapName").textContent = mapFile ? mapFile.name : "Choose a .js.map file", updateButtons()
+      }), document.getElementById("loadBtn").addEventListener("click", async () => {
+        if (jsFile && mapFile) try {
+          setStatus("Reading source map...");
+          var e = await mapFile.text();
+          if (mapData = JSON.parse(e), !mapData.sources) throw new Error("This does not appear to be a valid source map.");
+          sources = [];
+          for (let t = 0; t < mapData.sources.length; t++) {
+            var n = mapData.sources[t];
+            let e = null;
+            Array.isArray(mapData.sourcesContent) && null !== mapData.sourcesContent[t] && void 0 !== mapData.sourcesContent[t] && (e = mapData.sourcesContent[t]), sources.push({
+              name: n,
+              content: e
+            })
+          }
+          renderFileList();
+          var t = sources.filter(e => null !== e.content).length;
+          setStatus(`Loaded ${sources.length} mapped sources. ` + `${t} contain embedded source code.`), updateButtons()
+        } catch (e) {
+          console.error(e), setStatus("Error loading source map: " + e.message)
+        } else setStatus("Please select both the JavaScript file and the source map.")
+      }), document.getElementById("downloadCurrentBtn").addEventListener("click", () => {
+        currentSource && null !== currentSource.content && downloadBlob(new Blob([currentSource.content], {
+          type: "text/plain;charset=utf-8"
+        }), cleanFilename(currentSource.name))
+      }), document.getElementById("downloadJsBtn").addEventListener("click", () => {
+        jsFile && jsFile.arrayBuffer().then(e => {
+          downloadBlob(new Blob([e], {
+            type: jsFile.type || "application/javascript"
+          }), jsFile.name)
+        })
+      }), document.getElementById("downloadMapBtn").addEventListener("click", () => {
+        mapFile && mapFile.arrayBuffer().then(e => {
+          downloadBlob(new Blob([e], {
+            type: "application/json"
+          }), mapFile.name)
+        })
+      }), document.getElementById("zipBtn").addEventListener("click", async () => {
+        if (sources.length) {
+          const o = new JSZip;
+          let t = 0;
+          for (const a of sources) {
+            var e;
+            null !== a.content && (e = cleanFilename(a.name), o.file(e, a.content), t++)
+          }
+          if (0 !== t) {
+            setStatus(`Creating ZIP containing ${t} source files...`);
+            var n = await o.generateAsync({
+              type: "blob"
+            });
+            let e = document.getElementById("zipNameInput").value.trim();
+            e ? e.endsWith(".zip") || (e += ".zip") : e = "source-map-sources.zip", downloadBlob(n, e), setStatus(`ZIP created with ${t} source files.`)
+          } else setStatus("No embedded sourceContent was found, so there is nothing to export.")
+        }
+      })
+    </script>
