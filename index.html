@@ -781,7 +781,7 @@
       async function fetchText(url, timeoutMs = 15000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const PROXY_URL = "https://cors-proxy-gold-iota.vercel.app/api/fetch";
+    const PROXY_URL = "cors-proxy2-nu.vercel.app/api/fetch";
   try {
     const proxy = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
 
