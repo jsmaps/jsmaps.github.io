@@ -750,6 +750,7 @@
       var e = 0 < sources.length;
       document.getElementById("zipBtn").disabled = !e;
       document.getElementById("zipNameInput").disabled = !e;
+      document.getElementById("downloadAllZipBtn").disabled = !(sources.length > 0);
     }
 
     function setStatus(e) {
@@ -1269,6 +1270,39 @@
     $("scanUrl").addEventListener("keydown", e => {
       if (e.key === "Enter") runSiteScan();
     });
+    // 1. Click Handler to Zip and Download ALL loaded sources
+document.getElementById("downloadAllZipBtn").addEventListener("click", async () => {
+  if (!sources.length) return;
+
+  const zip = new JSZip();
+  let fileCount = 0;
+
+  for (const item of sources) {
+    if (item.content !== null) {
+      const fileName = cleanFilename(item.name);
+      zip.file(fileName, item.content);
+      fileCount++;
+    }
+  }
+
+  if (fileCount === 0) {
+    setStatus("No embedded source code found to export.");
+    return;
+  }
+
+  setStatus(`Zipping ${fileCount} files...`);
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  
+  // Uses mapData name if available, otherwise defaults
+  const zipName = mapData?.file 
+    ? `${mapData.file.replace(/\.js$/i, '')}-all-sources.zip` 
+    : "all-sources.zip";
+
+  downloadBlob(zipBlob, zipName);
+  setStatus(`Successfully downloaded ZIP with ${fileCount} source files.`);
+});
+
+
   </script>
 </body>
 </html>
