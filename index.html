@@ -745,7 +745,7 @@
          *   //@ sourceMappingURL=file.js.map
          * and equivalent block-comment forms.
          */
-        const re = /(?:\/\/[#@]\s*sourceMappingURL\s*=\s*([^\s*]+)|\/\*[#@]\s*sourceMappingURL\s*=\s*([^*]+?)\s*\*\/)/gi;
+        const re = /(?:\/\/[#@]\s*sourceMappingURL\s*=\s*(.+?)(?=\s|$))|(?:\/\*[#@]\s*sourceMappingURL\s*=\s*(.+?)(?:\s*\*\/|$))/gi;
         const matches = [];
         let m;
 
