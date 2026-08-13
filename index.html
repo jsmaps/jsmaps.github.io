@@ -9,6 +9,13 @@
   <title>JS Source Map Viewer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
+          button.warning {
+        background: #d97706; /* Amber / Orange color */
+      }
+      
+      button.warning:hover:not(:disabled) {
+        background: #b45309;
+      }
     :root {
       --bg-main: #090d16;
       --bg-card: #111827;
@@ -621,6 +628,7 @@
         <input id="zipNameInput" class="zip-input" disabled placeholder="Name?">
         <button id="zipBtn" disabled>Download ZIP</button>
       </div>
+      <button id="downloadAllZipBtn" class="warning" disabled>Download All to ZIP</button>
     </div>
 
     <div class="status" id="status">Select a JS file and a source map, or scan a site to begin.</div>
