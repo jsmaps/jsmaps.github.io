@@ -1,1145 +1,1266 @@
 <!doctype html>
 <html lang="en">
-<meta charset="UTF-8">
-<meta content="width=device-width,initial-scale=1" name="viewport">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width,initial-scale=1" name="viewport">
 
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
-<title>JS Source Map Viewer</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<style>
-      :root {
-        --bg-main: #090d16;
-        --bg-card: #111827;
-        --bg-card-hover: #1f293d;
-        --border-color: #1f2937;
-        --border-focus: #3b82f6;
-        --text-main: #f3f4f6;
-        --text-muted: #9ca3af;
-        --primary: #2563eb;
-        --primary-hover: #1d4ed8;
-        --secondary: #374151;
-        --secondary-hover: #4b5563;
-        --accent-blue: #60a5fa;
-        --radius: 8px
-      }
+  <title>JS Source Map Viewer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #111827;
+      --bg-card-hover: #1f293d;
+      --border-color: #1f2937;
+      --border-focus: #3b82f6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --secondary: #374151;
+      --secondary-hover: #4b5563;
+      --accent-blue: #60a5fa;
+      --radius: 8px
+    }
 
-      * {
-        box-sizing: border-box
-      }
+    * {
+      box-sizing: border-box
+    }
 
-      body {
-        margin: 0;
-        background: var(--bg-main);
-        color: var(--text-main);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        -webkit-font-smoothing: antialiased;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column
-      }
+    body {
+      margin: 0;
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column
+    }
 
-      header {
-        padding: 24px 32px;
-        border-bottom: 1px solid var(--border-color);
-        background: rgba(17, 24, 39, .8);
-        backdrop-filter: blur(12px)
-      }
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(17, 24, 39, .8);
+      backdrop-filter: blur(12px)
+    }
 
-      header h1 {
-        margin: 0 0 6px;
-        font-size: 22px;
-        font-weight: 700;
-        letter-spacing: -.02em;
-        color: #fff
-      }
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      color: #fff
+    }
 
-      header p {
-        margin: 0;
-        color: var(--text-muted);
-        font-size: 14px
-      }
+    header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px
+    }
 
-      .container {
-        max-width: 1400px;
-        width: 100%;
-        margin: 0 auto;
-        padding: 28px;
-        flex: 1;
-        display: flex;
-        flex-direction: column
-      }
+    .container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px;
+      flex: 1;
+      display: flex;
+      flex-direction: column
+    }
 
-      .upload-area {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        margin-bottom: 20px
-      }
+    .upload-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px
+    }
 
-      .drop-box {
-        border: 2px dashed var(--border-color);
-        border-radius: var(--radius);
-        padding: 28px 20px;
-        text-align: center;
-        background: var(--bg-card);
-        cursor: pointer;
-        transition: all .2s ease;
-        display: flex;
+    .drop-box {
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: all .2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center
+    }
+
+    .drop-box:hover {
+      border-color: var(--accent-blue);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px)
+    }
+
+    .drop-box strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff
+    }
+
+    .drop-box span {
+      color: var(--text-muted);
+      font-size: 13px
+    }
+
+    input[type=file] {
+      display: none
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 18px
+    }
+
+    .zip-export-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 3px;
+      border-radius: var(--radius)
+    }
+
+    .zip-input {
+      background: 0 0;
+      border: none;
+      color: var(--text-main);
+      padding: 6px 10px;
+      font-size: 13px;
+      outline: 0;
+      width: 180px
+    }
+
+    .zip-input::placeholder {
+      color: var(--text-muted)
+    }
+
+    button {
+      border: 0;
+      border-radius: var(--radius);
+      padding: 10px 18px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all .15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .2)
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px)
+    }
+
+    button.secondary {
+      background: var(--secondary)
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: var(--secondary-hover)
+    }
+
+    button.small-btn {
+      padding: 5px 10px;
+      font-size: 11px;
+      border-radius: 4px;
+    }
+
+    button:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      box-shadow: none
+    }
+
+    .status {
+      padding: 12px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      color: var(--text-muted);
+      font-size: 13.5px;
+      display: flex;
+      align-items: center
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: 650px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #0d1322;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .3)
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-card);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0
+    }
+
+    .sidebar-title {
+      padding: 16px 18px;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0
+    }
+
+    .file-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      flex: 1;
+      max-height: 100%
+    }
+
+    .file-item {
+      padding: 10px 18px;
+      border-bottom: 1px solid rgba(31, 41, 55, .5);
+      cursor: pointer;
+      font-size: 13px;
+      word-break: break-all;
+      color: var(--text-main);
+      transition: background .15s ease
+    }
+
+    .file-item:hover {
+      background: var(--bg-card-hover)
+    }
+
+    .file-item.active {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 500
+    }
+
+    .viewer {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: #090d16
+    }
+
+    .viewer-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px
+    }
+
+    .filename {
+      font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--accent-blue)
+    }
+
+    pre {
+      margin: 0;
+      padding: 20px;
+      flex: 1;
+      overflow: auto;
+      white-space: pre;
+      font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      background: #090d16
+    }
+
+    .empty {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4b5563;
+      text-align: center;
+      padding: 40px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--secondary);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-main)
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--secondary);
+      border-radius: 4px
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--secondary-hover)
+    }
+
+    .auto-scan {
+      background: linear-gradient(180deg, rgba(17,24,39,.98), rgba(13,19,34,.98));
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.18);
+    }
+
+    .auto-scan-head h2 {
+      margin: 0 0 5px;
+      font-size: 17px;
+      color: #fff;
+    }
+
+    .auto-scan-head p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .auto-scan code {
+      color: var(--accent-blue);
+    }
+
+    .scan-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .scan-url {
+      flex: 1;
+      min-width: 0;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      color: var(--text-main);
+      padding: 10px 13px;
+      outline: none;
+      font-size: 13px;
+    }
+
+    .scan-url:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px rgba(59,130,246,.12);
+    }
+
+    .scan-options {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 11px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .scan-options label {
+      cursor: pointer;
+    }
+
+    .scan-progress {
+      margin-top: 14px;
+      padding: 9px 12px;
+      border-radius: 6px;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 12px;
+      min-height: 36px;
+    }
+
+    .scan-summary {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .scan-stat {
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-card);
+    }
+
+    .scan-stat b {
+      display: block;
+      font-size: 18px;
+      color: #fff;
+    }
+
+    .scan-stat span {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .map-results {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .scan-empty {
+      padding: 25px;
+      text-align: center;
+      color: #4b5563;
+      border: 1px dashed var(--border-color);
+      border-radius: 7px;
+    }
+
+    .map-result {
+      border: 1px solid var(--border-color);
+      border-radius: 7px;
+      background: #0d1322;
+      overflow: hidden;
+    }
+
+    .map-result.good {
+      border-color: rgba(37,99,235,.5);
+    }
+
+    .map-result-head {
+      padding: 11px 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .map-result-title {
+      min-width: 0;
+      font-family: SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .map-result-title a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    .map-result-title a:hover {
+      text-decoration: underline;
+    }
+
+    .map-badge {
+      flex-shrink: 0;
+      padding: 3px 7px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--secondary);
+      color: var(--text-muted);
+    }
+
+    .map-badge.found {
+      background: rgba(37,99,235,.2);
+      color: #93c5fd;
+    }
+
+    .map-result-body {
+      padding: 10px 13px;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .map-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .map-match {
+      margin-top: 7px;
+      padding: 7px 9px;
+      border-left: 2px solid var(--accent-blue);
+      background: rgba(37,99,235,.07);
+      word-break: break-all;
+    }
+
+    .map-match strong {
+      color: #dbeafe;
+    }
+
+    .map-error {
+      color: #fca5a5;
+    }
+
+    @media (max-width:800px) {
+      .scan-controls {
         flex-direction: column;
-        align-items: center;
-        justify-content: center
       }
-
-      .drop-box:hover {
-        border-color: var(--accent-blue);
-        background: var(--bg-card-hover);
-        transform: translateY(-2px)
+      .scan-summary {
+        grid-template-columns: repeat(2, 1fr);
       }
-
-      .drop-box strong {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 15px;
-        font-weight: 600;
-        color: #fff
-      }
-
-      .drop-box span {
-        color: var(--text-muted);
-        font-size: 13px
-      }
-
-      input[type=file] {
-        display: none
-      }
-
-      .actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-        margin-bottom: 18px
-      }
-
-      .zip-export-group {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        padding: 3px;
-        border-radius: var(--radius)
-      }
-
-      .zip-input {
-        background: 0 0;
-        border: none;
-        color: var(--text-main);
-        padding: 6px 10px;
-        font-size: 13px;
-        outline: 0;
-        width: 180px
-      }
-
-      .zip-input::placeholder {
-        color: var(--text-muted)
-      }
-
-      button {
-        border: 0;
-        border-radius: var(--radius);
-        padding: 10px 18px;
-        background: var(--primary);
-        color: #fff;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-        transition: all .15s ease;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, .2)
-      }
-
-      button:hover:not(:disabled) {
-        background: var(--primary-hover);
-        transform: translateY(-1px)
-      }
-
-      button.secondary {
-        background: var(--secondary)
-      }
-
-      button.secondary:hover:not(:disabled) {
-        background: var(--secondary-hover)
-      }
-
-      button:disabled {
-        opacity: .4;
-        cursor: not-allowed;
-        box-shadow: none
-      }
-
-      .status {
-        padding: 12px 18px;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        margin-bottom: 20px;
-        color: var(--text-muted);
-        font-size: 13.5px;
-        display: flex;
-        align-items: center
+      .upload-area {
+        grid-template-columns: 1fr
       }
 
       .layout {
-        display: grid;
-        grid-template-columns: 320px 1fr;
-        height: 650px;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        overflow: hidden;
-        background: #0d1322;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, .3)
+        grid-template-columns: 1fr;
+        height: auto
       }
 
       .sidebar {
-        border-right: 1px solid var(--border-color);
-        background: var(--bg-card);
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        min-height: 0
-      }
-
-      .sidebar-title {
-        padding: 16px 18px;
-        font-weight: 600;
-        font-size: 13px;
-        letter-spacing: .03em;
-        text-transform: uppercase;
-        color: var(--text-muted);
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-shrink: 0
-      }
-
-      .file-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        overflow-y: auto;
-        flex: 1;
-        max-height: 100%
-      }
-
-      .file-item {
-        padding: 10px 18px;
-        border-bottom: 1px solid rgba(31, 41, 55, .5);
-        cursor: pointer;
-        font-size: 13px;
-        word-break: break-all;
-        color: var(--text-main);
-        transition: background .15s ease
-      }
-
-      .file-item:hover {
-        background: var(--bg-card-hover)
-      }
-
-      .file-item.active {
-        background: var(--primary);
-        color: #fff;
-        font-weight: 500
+        height: 250px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border-color)
       }
 
       .viewer {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        background: #090d16
+        min-height: 400px
       }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>JS Source Map Viewer</h1>
+    <p>Load a JavaScript bundle and its source map to inspect and export mapped source files.</p>
+  </header>
+  <div class="container">
 
-      .viewer-header {
-        padding: 12px 20px;
-        border-bottom: 1px solid var(--border-color);
-        background: var(--bg-card);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px
-      }
-
-      .filename {
-        font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
-        font-size: 13px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        color: var(--accent-blue)
-      }
-
-      pre {
-        margin: 0;
-        padding: 20px;
-        flex: 1;
-        overflow: auto;
-        white-space: pre;
-        font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
-        font-size: 13px;
-        line-height: 1.6;
-        color: #e2e8f0;
-        background: #090d16
-      }
-
-      .empty {
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #4b5563;
-        text-align: center;
-        padding: 40px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
-      }
-
-      .badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 12px;
-        background: var(--secondary);
-        color: var(--text-muted);
-        font-size: 11px;
-        font-weight: 600
-      }
-
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px
-      }
-
-      ::-webkit-scrollbar-track {
-        background: var(--bg-main)
-      }
-
-      ::-webkit-scrollbar-thumb {
-        background: var(--secondary);
-        border-radius: 4px
-      }
-
-      ::-webkit-scrollbar-thumb:hover {
-        background: var(--secondary-hover)
-      }
-
-
-      .auto-scan {
-        background: linear-gradient(180deg, rgba(17,24,39,.98), rgba(13,19,34,.98));
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,.18);
-      }
-
-      .auto-scan-head h2 {
-        margin: 0 0 5px;
-        font-size: 17px;
-        color: #fff;
-      }
-
-      .auto-scan-head p {
-        margin: 0;
-        color: var(--text-muted);
-        font-size: 13px;
-        line-height: 1.5;
-      }
-
-      .auto-scan code {
-        color: var(--accent-blue);
-      }
-
-      .scan-controls {
-        display: flex;
-        gap: 10px;
-        margin-top: 16px;
-      }
-
-      .scan-url {
-        flex: 1;
-        min-width: 0;
-        background: #090d16;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        color: var(--text-main);
-        padding: 10px 13px;
-        outline: none;
-        font-size: 13px;
-      }
-
-      .scan-url:focus {
-        border-color: var(--border-focus);
-        box-shadow: 0 0 0 2px rgba(59,130,246,.12);
-      }
-
-      .scan-options {
-        display: flex;
-        gap: 18px;
-        flex-wrap: wrap;
-        margin-top: 11px;
-        color: var(--text-muted);
-        font-size: 12px;
-      }
-
-      .scan-options label {
-        cursor: pointer;
-      }
-
-      .scan-progress {
-        margin-top: 14px;
-        padding: 9px 12px;
-        border-radius: 6px;
-        background: #090d16;
-        border: 1px solid var(--border-color);
-        color: var(--text-muted);
-        font-size: 12px;
-        min-height: 36px;
-      }
-
-      .scan-summary {
-        margin-top: 12px;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
-      }
-
-      .scan-stat {
-        padding: 10px 12px;
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        background: var(--bg-card);
-      }
-
-      .scan-stat b {
-        display: block;
-        font-size: 18px;
-        color: #fff;
-      }
-
-      .scan-stat span {
-        color: var(--text-muted);
-        font-size: 11px;
-      }
-
-      .map-results {
-        margin-top: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        max-height: 460px;
-        overflow: auto;
-      }
-
-      .scan-empty {
-        padding: 25px;
-        text-align: center;
-        color: #4b5563;
-        border: 1px dashed var(--border-color);
-        border-radius: 7px;
-      }
-
-      .map-result {
-        border: 1px solid var(--border-color);
-        border-radius: 7px;
-        background: #0d1322;
-        overflow: hidden;
-      }
-
-      .map-result.good {
-        border-color: rgba(37,99,235,.5);
-      }
-
-      .map-result-head {
-        padding: 11px 13px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        border-bottom: 1px solid var(--border-color);
-      }
-
-      .map-result-title {
-        min-width: 0;
-        font-family: SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;
-        font-size: 12px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .map-result-title a {
-        color: var(--accent-blue);
-        text-decoration: none;
-      }
-
-      .map-result-title a:hover {
-        text-decoration: underline;
-      }
-
-      .map-badge {
-        flex-shrink: 0;
-        padding: 3px 7px;
-        border-radius: 10px;
-        font-size: 10px;
-        font-weight: 700;
-        background: var(--secondary);
-        color: var(--text-muted);
-      }
-
-      .map-badge.found {
-        background: rgba(37,99,235,.2);
-        color: #93c5fd;
-      }
-
-      .map-result-body {
-        padding: 10px 13px;
-        color: var(--text-muted);
-        font-size: 11px;
-        line-height: 1.55;
-      }
-
-      .map-match {
-        margin-top: 7px;
-        padding: 7px 9px;
-        border-left: 2px solid var(--accent-blue);
-        background: rgba(37,99,235,.07);
-        word-break: break-all;
-      }
-
-      .map-match strong {
-        color: #dbeafe;
-      }
-
-      .map-error {
-        color: #fca5a5;
-      }
-
-      @media (max-width:800px) {
-        .scan-controls {
-          flex-direction: column;
-        }
-        .scan-summary {
-          grid-template-columns: repeat(2, 1fr);
-        }
-      }
-
-      @media (max-width:800px) {
-        .upload-area {
-          grid-template-columns: 1fr
-        }
-
-        .layout {
-          grid-template-columns: 1fr;
-          height: auto
-        }
-
-        .sidebar {
-          height: 250px;
-          border-right: 0;
-          border-bottom: 1px solid var(--border-color)
-        }
-
-        .viewer {
-          min-height: 400px
-        }
-      }
-    </style>
-    <header>
-      <h1>JS Source Map Viewer</h1>
-      <p>Load a JavaScript bundle and its source map to inspect and export mapped source files.
-    </header>
-    <div class=container>
-
-      <section class="auto-scan">
-        <div class="auto-scan-head">
-          <div>
-            <h2>🔎 Automatic Source Map Scanner</h2>
-            <p>Enter a page URL. The scanner discovers JavaScript files, checks each <code>.js.map</code>, and also looks for source-map comments inside the JavaScript.</p>
-          </div>
+    <section class="auto-scan">
+      <div class="auto-scan-head">
+        <div>
+          <h2>🔎 Automatic Source Map Scanner</h2>
+          <p>Enter a page URL. The scanner discovers JavaScript files, checks each <code>.js.map</code>, and looks for source-map comments inside the JavaScript.</p>
         </div>
-
-        <div class="scan-controls">
-          <input id="scanUrl" class="scan-url" type="url"
-            placeholder="https://example.com/"
-            autocomplete="off">
-          <button id="scanBtn">Scan Site</button>
-          <button id="stopScanBtn" class="secondary" disabled>Stop</button>
-        </div>
-
-        <div class="scan-options">
-          <label><input id="sameOriginOnly" type="checkbox" checked> Same-origin JS only</label>
-          <label><input id="scanInline" type="checkbox" checked> Scan inline scripts</label>
-        </div>
-
-        <div id="scanProgress" class="scan-progress">
-          <span id="scanProgressText">Ready to scan.</span>
-        </div>
-
-        <div class="scan-summary" id="scanSummary" hidden></div>
-        <div class="map-results" id="mapResults">
-          <div class="scan-empty">No scan results yet.</div>
-        </div>
-      </section>
-
-      <div class=upload-area><label class=drop-box><input id=jsFile accept=.js,.mjs,.cjs,text/javascript type=file><strong>📄 Select JavaScript</strong><span id=jsName>Choose a .js file</span></label><label class=drop-box><input id=mapFile accept=.map,application/json type=file><strong>🗺️ Select Source Map</strong><span id=mapName>Choose a .js.map file</span></label></div>
-      <div class=actions><button id=loadBtn>Load Source Map</button><button id=downloadJsBtn disabled class=secondary>Download JS</button><button id=downloadMapBtn disabled class=secondary>Download .map</button>
-        <div class=zip-export-group><input id=zipNameInput class=zip-input disabled placeholder=Name?><button id=zipBtn disabled>Download ZIP</button></div>
       </div>
-      <div class=status id=status>Select a JS file and a source map to begin.</div>
-      <div class=layout>
-        <aside class=sidebar>
-          <div class=sidebar-title>Mapped Sources <span id=count class=badge>0</span></div>
-          <ul class=file-list id=fileList></ul>
-        </aside>
-        <main class=viewer>
-          <div class=viewer-header>
-            <div class=filename id=currentFile>No file selected</div><button id=downloadCurrentBtn disabled>Download Current</button>
-          </div>
-          <pre id=code><div class=empty>Select a source from the list to view it.</div></pre>
-        </main>
+
+      <div class="scan-controls">
+        <input id="scanUrl" class="scan-url" type="url" placeholder="https://example.com/" autocomplete="off">
+        <button id="scanBtn">Scan Site</button>
+        <button id="stopScanBtn" class="secondary" disabled>Stop</button>
+      </div>
+
+      <div class="scan-options">
+        <label><input id="sameOriginOnly" type="checkbox" checked> Same-origin JS only</label>
+        <label><input id="scanInline" type="checkbox" checked> Scan inline scripts</label>
+      </div>
+
+      <div id="scanProgress" class="scan-progress">
+        <span id="scanProgressText">Ready to scan.</span>
+      </div>
+
+      <div class="scan-summary" id="scanSummary" hidden></div>
+      <div class="map-results" id="mapResults">
+        <div class="scan-empty">No scan results yet.</div>
+      </div>
+    </section>
+
+    <div class="upload-area">
+      <label class="drop-box">
+        <input id="jsFile" accept=".js,.mjs,.cjs,text/javascript" type="file">
+        <strong>📄 Select JavaScript</strong>
+        <span id="jsName">Choose a .js file</span>
+      </label>
+      <label class="drop-box">
+        <input id="mapFile" accept=".map,application/json" type="file">
+        <strong>🗺️ Select Source Map</strong>
+        <span id="mapName">Choose a .js.map file</span>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="loadBtn">Load Source Map</button>
+      <button id="downloadJsBtn" disabled class="secondary">Download JS</button>
+      <button id="downloadMapBtn" disabled class="secondary">Download .map</button>
+      <div class="zip-export-group">
+        <input id="zipNameInput" class="zip-input" disabled placeholder="Name?">
+        <button id="zipBtn" disabled>Download ZIP</button>
       </div>
     </div>
-    <script>
-      let jsFile = null,
-        mapFile = null,
-        mapData = null,
-        sources = [],
-        currentSource = null;
 
-      function renderFileList() {
-        const o = document.getElementById("fileList");
-        o.innerHTML = "", document.getElementById("count").textContent = sources.length, sources.forEach((e, t) => {
-          const n = document.createElement("li");
-          n.className = "file-item", n.textContent = e.name, null === e.content && (n.title = "This source map does not contain sourcesContent for this file.", n.style.opacity = "0.55"), n.addEventListener("click", () => {
-            document.querySelectorAll(".file-item").forEach(e => e.classList.remove("active")), n.classList.add("active"), showSource(t)
-          }), o.appendChild(n)
-        })
-      }
+    <div class="status" id="status">Select a JS file and a source map, or scan a site to begin.</div>
 
-      function showSource(e) {
-        e = sources[e];
-        currentSource = e, document.getElementById("currentFile").textContent = e.name;
-        const t = document.getElementById("code");
-        if (null === e.content) return t.textContent = "No embedded sourceContent exists for this file.\n\nThe source map only references this source:\n" + e.name, void(document.getElementById("downloadCurrentBtn").disabled = !0);
-        t.textContent = e.content, document.getElementById("downloadCurrentBtn").disabled = !1
-      }
+    <div class="layout" id="viewerSection">
+      <aside class="sidebar">
+        <div class="sidebar-title">Mapped Sources <span id="count" class="badge">0</span></div>
+        <ul class="file-list" id="fileList"></ul>
+      </aside>
+      <main class="viewer">
+        <div class="viewer-header">
+          <div class="filename" id="currentFile">No file selected</div>
+          <button id="downloadCurrentBtn" disabled>Download Current</button>
+        </div>
+        <pre id="code"><div class="empty">Select a source from the list to view it.</div></pre>
+      </main>
+    </div>
+  </div>
 
-      function downloadBlob(e, t) {
-        const n = URL.createObjectURL(e),
-          o = document.createElement("a");
-        o.href = n, o.download = t, document.body.appendChild(o), o.click(), o.remove(), setTimeout(() => {
-          URL.revokeObjectURL(n)
-        }, 1e3)
-      }
+  <script>
+    let jsFile = null,
+      mapFile = null,
+      mapData = null,
+      sources = [],
+      currentSource = null;
 
-      function cleanFilename(e) {
-        if (!e) return "source.txt";
-        let t = e;
-        return t = t.replace(/^webpack:\/\/\/?/, ""), t = t.replace(/^webpack:\/\//, ""), t = t.replace(/^file:\/\/\/?/, ""), t = t.replace(/^\/+/, ""), t = t.replace(/\.\.(\/|\\)/g, ""), t.trim() || (t = "source.txt"), t
-      }
-
-      function updateButtons() {
-        document.getElementById("downloadJsBtn").disabled = !jsFile, document.getElementById("downloadMapBtn").disabled = !mapFile;
-        var e = 0 < sources.length;
-        document.getElementById("zipBtn").disabled = !e, document.getElementById("zipNameInput").disabled = !e
-      }
-
-      function setStatus(e) {
-        document.getElementById("status").textContent = e
-      }
-      document.getElementById("jsFile").addEventListener("change", e => {
-        jsFile = e.target.files[0], document.getElementById("jsName").textContent = jsFile ? jsFile.name : "Choose a .js file", updateButtons()
-      }), document.getElementById("mapFile").addEventListener("change", e => {
-        mapFile = e.target.files[0], document.getElementById("mapName").textContent = mapFile ? mapFile.name : "Choose a .js.map file", updateButtons()
-      }), document.getElementById("loadBtn").addEventListener("click", async () => {
-        if (jsFile && mapFile) try {
-          setStatus("Reading source map...");
-          var e = await mapFile.text();
-          if (mapData = JSON.parse(e), !mapData.sources) throw new Error("This does not appear to be a valid source map.");
-          sources = [];
-          for (let t = 0; t < mapData.sources.length; t++) {
-            var n = mapData.sources[t];
-            let e = null;
-            Array.isArray(mapData.sourcesContent) && null !== mapData.sourcesContent[t] && void 0 !== mapData.sourcesContent[t] && (e = mapData.sourcesContent[t]), sources.push({
-              name: n,
-              content: e
-            })
-          }
-          renderFileList();
-          var t = sources.filter(e => null !== e.content).length;
-          setStatus(`Loaded ${sources.length} mapped sources. ` + `${t} contain embedded source code.`), updateButtons()
-        } catch (e) {
-          console.error(e), setStatus("Error loading source map: " + e.message)
-        } else setStatus("Please select both the JavaScript file and the source map.")
-      }), document.getElementById("downloadCurrentBtn").addEventListener("click", () => {
-        currentSource && null !== currentSource.content && downloadBlob(new Blob([currentSource.content], {
-          type: "text/plain;charset=utf-8"
-        }), cleanFilename(currentSource.name))
-      }), document.getElementById("downloadJsBtn").addEventListener("click", () => {
-        jsFile && jsFile.arrayBuffer().then(e => {
-          downloadBlob(new Blob([e], {
-            type: jsFile.type || "application/javascript"
-          }), jsFile.name)
-        })
-      }), document.getElementById("downloadMapBtn").addEventListener("click", () => {
-        mapFile && mapFile.arrayBuffer().then(e => {
-          downloadBlob(new Blob([e], {
-            type: "application/json"
-          }), mapFile.name)
-        })
-      }), document.getElementById("zipBtn").addEventListener("click", async () => {
-        if (sources.length) {
-          const o = new JSZip;
-          let t = 0;
-          for (const a of sources) {
-            var e;
-            null !== a.content && (e = cleanFilename(a.name), o.file(e, a.content), t++)
-          }
-          if (0 !== t) {
-            setStatus(`Creating ZIP containing ${t} source files...`);
-            var n = await o.generateAsync({
-              type: "blob"
-            });
-            let e = document.getElementById("zipNameInput").value.trim();
-            e ? e.endsWith(".zip") || (e += ".zip") : e = "source-map-sources.zip", downloadBlob(n, e), setStatus(`ZIP created with ${t} source files.`)
-          } else setStatus("No embedded sourceContent was found, so there is nothing to export.")
+    function renderFileList() {
+      const o = document.getElementById("fileList");
+      o.innerHTML = "";
+      document.getElementById("count").textContent = sources.length;
+      
+      sources.forEach((e, t) => {
+        const n = document.createElement("li");
+        n.className = "file-item";
+        n.textContent = e.name;
+        if (null === e.content) {
+          n.title = "This source map does not contain sourcesContent for this file.";
+          n.style.opacity = "0.55";
         }
-      })
-
-      /* Automatic site source-map scanner */
-      const scanState = {
-        running: false,
-        stop: false,
-        results: []
-      };
-
-      const $ = id => document.getElementById(id);
-
-      function normalizeUrl(raw) {
-        const value = raw.trim();
-        if (!value) throw new Error("Enter a URL first.");
-        return new URL(/^https?:\/\//i.test(value) ? value : "https://" + value);
-      }
-
-      function absoluteUrl(value, base) {
-        try {
-          return new URL(value, base).href;
-        } catch (_) {
-          return null;
-        }
-      }
-
-      function sourceMapFromComment(jsText, jsUrl) {
-        /*
-         * Supports the standard forms:
-         *   //# sourceMappingURL=file.js.map
-         *   //@ sourceMappingURL=file.js.map
-         * and equivalent block-comment forms.
-         */
-        const re = /(?:\/\/[#@]\s*sourceMappingURL\s*=\s*(.+?)(?=\s|$))|(?:\/\*[#@]\s*sourceMappingURL\s*=\s*(.+?)(?:\s*\*\/|$))/gi;
-        const matches = [];
-        let m;
-
-        while ((m = re.exec(jsText))) {
-          const raw = (m[1] || m[2] || "").trim();
-          if (!raw) continue;
-
-          // Data URLs are maps embedded directly in the JS.
-          if (/^data:application\/json/i.test(raw)) {
-            matches.push({
-              url: jsUrl,
-              raw,
-              embedded: true,
-              index: m.index
-            });
-            continue;
-          }
-
-          const resolved = absoluteUrl(raw, jsUrl);
-          if (resolved) {
-            matches.push({
-              url: resolved,
-              raw,
-              embedded: false,
-              index: m.index
-            });
-          }
-        }
-
-        return matches;
-      }
-
-      async function fetchText(url, timeoutMs = 15000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const PROXY_URL = "https://cors-proxy2-nu.vercel.app/api/fetch";
-  try {
-    const proxy = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
-
-    const response = await fetch(proxy, {
-      method: "GET",
-      cache: "no-store",
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      throw new Error(`Proxy HTTP ${response.status}`);
+        n.addEventListener("click", () => {
+          document.querySelectorAll(".file-item").forEach(item => item.classList.remove("active"));
+          n.classList.add("active");
+          showSource(t);
+        });
+        o.appendChild(n);
+      });
     }
 
-    return await response.text();
+    function showSource(e) {
+      e = sources[e];
+      if (!e) return;
+      currentSource = e;
+      document.getElementById("currentFile").textContent = e.name;
+      const t = document.getElementById("code");
+      if (null === e.content) {
+        t.textContent = "No embedded sourceContent exists for this file.\n\nThe source map only references this source:\n" + e.name;
+        document.getElementById("downloadCurrentBtn").disabled = true;
+        return;
+      }
+      t.textContent = e.content;
+      document.getElementById("downloadCurrentBtn").disabled = false;
+    }
 
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-      function extractScriptUrls(htmlText, pageUrl) {
-        const doc = new DOMParser().parseFromString(htmlText, "text/html");
-        return [...doc.querySelectorAll("script[src]")]
-          .map(script => absoluteUrl(script.getAttribute("src"), pageUrl))
-          .filter(Boolean);
+    function parseAndLoadMapData(jsonObj, mapName = "scanned.map") {
+      mapData = jsonObj;
+      if (!mapData.sources) {
+        throw new Error("This does not appear to be a valid source map.");
+      }
+      sources = [];
+      for (let t = 0; t < mapData.sources.length; t++) {
+        let n = mapData.sources[t];
+        let e = null;
+        if (Array.isArray(mapData.sourcesContent) && mapData.sourcesContent[t] !== null && mapData.sourcesContent[t] !== undefined) {
+          e = mapData.sourcesContent[t];
+        }
+        sources.push({
+          name: n,
+          content: e
+        });
+      }
+      renderFileList();
+      
+      if (sources.length > 0) {
+        const firstValidIndex = sources.findIndex(s => s.content !== null);
+        showSource(firstValidIndex >= 0 ? firstValidIndex : 0);
+        const firstItem = document.querySelectorAll(".file-item")[firstValidIndex >= 0 ? firstValidIndex : 0];
+        if (firstItem) firstItem.classList.add("active");
       }
 
-      function decodeDataMap(dataUrl) {
+      const t = sources.filter(e => null !== e.content).length;
+      setStatus(`Loaded ${sources.length} mapped sources from ${mapName}. ${t} contain embedded source code.`);
+      updateButtons();
+
+      document.getElementById("viewerSection").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function downloadBlob(e, t) {
+      const n = URL.createObjectURL(e),
+        o = document.createElement("a");
+      o.href = n;
+      o.download = t;
+      document.body.appendChild(o);
+      o.click();
+      o.remove();
+      setTimeout(() => {
+        URL.revokeObjectURL(n);
+      }, 1000);
+    }
+
+    function cleanFilename(e) {
+      if (!e) return "source.txt";
+      let t = e;
+      return t = t.replace(/^webpack:\/\/\/?/, ""), t = t.replace(/^webpack:\/\//, ""), t = t.replace(/^file:\/\/\/?/, ""), t = t.replace(/^\/+/, ""), t = t.replace(/\.\.(\/|\\)/g, ""), t.trim() || (t = "source.txt"), t;
+    }
+
+    function updateButtons() {
+      document.getElementById("downloadJsBtn").disabled = !jsFile;
+      document.getElementById("downloadMapBtn").disabled = !mapFile && !mapData;
+      var e = 0 < sources.length;
+      document.getElementById("zipBtn").disabled = !e;
+      document.getElementById("zipNameInput").disabled = !e;
+    }
+
+    function setStatus(e) {
+      document.getElementById("status").textContent = e;
+    }
+
+    document.getElementById("jsFile").addEventListener("change", e => {
+      jsFile = e.target.files[0];
+      document.getElementById("jsName").textContent = jsFile ? jsFile.name : "Choose a .js file";
+      updateButtons();
+    });
+
+    document.getElementById("mapFile").addEventListener("change", e => {
+      mapFile = e.target.files[0];
+      document.getElementById("mapName").textContent = mapFile ? mapFile.name : "Choose a .js.map file";
+      updateButtons();
+    });
+
+    document.getElementById("loadBtn").addEventListener("click", async () => {
+      if (jsFile && mapFile) {
         try {
-          const comma = dataUrl.indexOf(",");
-          if (comma < 0) return null;
+          setStatus("Reading source map...");
+          var e = await mapFile.text();
+          parseAndLoadMapData(JSON.parse(e), mapFile.name);
+        } catch (e) {
+          console.error(e);
+          setStatus("Error loading source map: " + e.message);
+        }
+      } else {
+        setStatus("Please select both the JavaScript file and the source map.");
+      }
+    });
 
-          const meta = dataUrl.slice(0, comma);
-          const data = dataUrl.slice(comma + 1);
+    document.getElementById("downloadCurrentBtn").addEventListener("click", () => {
+      currentSource && null !== currentSource.content && downloadBlob(new Blob([currentSource.content], {
+        type: "text/plain;charset=utf-8"
+      }), cleanFilename(currentSource.name));
+    });
 
-          if (/;base64/i.test(meta)) {
-            return JSON.parse(atob(data));
-          }
+    document.getElementById("downloadJsBtn").addEventListener("click", () => {
+      jsFile && jsFile.arrayBuffer().then(e => {
+        downloadBlob(new Blob([e], {
+          type: jsFile.type || "application/javascript"
+        }), jsFile.name);
+      });
+    });
 
-          return JSON.parse(decodeURIComponent(data));
-        } catch (_) {
-          return null;
+    document.getElementById("downloadMapBtn").addEventListener("click", () => {
+      if (mapFile) {
+        mapFile.arrayBuffer().then(e => {
+          downloadBlob(new Blob([e], {
+            type: "application/json"
+          }), mapFile.name);
+        });
+      } else if (mapData) {
+        downloadBlob(new Blob([JSON.stringify(mapData, null, 2)], {
+          type: "application/json"
+        }), "scanned-sourcemap.map");
+      }
+    });
+
+    document.getElementById("zipBtn").addEventListener("click", async () => {
+      if (sources.length) {
+        const o = new JSZip;
+        let t = 0;
+        for (const a of sources) {
+          var e;
+          null !== a.content && (e = cleanFilename(a.name), o.file(e, a.content), t++);
+        }
+        if (0 !== t) {
+          setStatus(`Creating ZIP containing ${t} source files...`);
+          var n = await o.generateAsync({
+            type: "blob"
+          });
+          let e = document.getElementById("zipNameInput").value.trim();
+          e ? e.endsWith(".zip") || (e += ".zip") : e = "source-map-sources.zip";
+          downloadBlob(n, e);
+          setStatus(`ZIP created with ${t} source files.`);
+        } else {
+          setStatus("No embedded sourceContent was found, so there is nothing to export.");
+        }
+      }
+    });
+
+    /* Automatic site source-map scanner */
+    const scanState = {
+      running: false,
+      stop: false,
+      results: []
+    };
+
+    const $ = id => document.getElementById(id);
+
+    function normalizeUrl(raw) {
+      const value = raw.trim();
+      if (!value) throw new Error("Enter a URL first.");
+      return new URL(/^https?:\/\//i.test(value) ? value : "https://" + value);
+    }
+
+    function absoluteUrl(value, base) {
+      try {
+        return new URL(value, base).href;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function sourceMapFromComment(jsText, jsUrl) {
+      const re = /(?:\/\/\s*[#@]\s*sourceMappingURL\s*=\s*(.+?)(?=\s|$))|(?:\/\*\s*[#@]\s*sourceMappingURL\s*=\s*(.+?)(?:\s*\*\/|$))/gi;
+      const matches = [];
+      let m;
+
+      while ((m = re.exec(jsText))) {
+        const raw = (m[1] || m[2] || "").trim().replace(/^['"]|['"]$/g, '');
+        if (!raw) continue;
+
+        if (/^data:application\/json/i.test(raw)) {
+          matches.push({
+            url: jsUrl,
+            raw,
+            embedded: true,
+            index: m.index
+          });
+          continue;
+        }
+
+        const resolved = absoluteUrl(raw, jsUrl);
+        if (resolved) {
+          matches.push({
+            url: resolved,
+            raw,
+            embedded: false,
+            index: m.index
+          });
         }
       }
 
-      function mapLooksValid(text) {
-        try {
-          const obj = JSON.parse(text);
-          return !!obj && typeof obj === "object" &&
-            (obj.version === 3 || Array.isArray(obj.sources));
-        } catch (_) {
-          return false;
-        }
-      }
+      return matches;
+    }
 
-      function renderScanResults() {
-        const box = $("mapResults");
-        box.innerHTML = "";
+    async function fetchText(url, timeoutMs = 15000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const PROXY_URL = "https://cors-proxy2-nu.vercel.app/api/fetch";
+      try {
+        const proxy = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
 
-        if (!scanState.results.length) {
-          box.innerHTML = '<div class="scan-empty">No JavaScript files were found.</div>';
-          return;
-        }
-
-        // Strongest matches first: explicit comment, then valid guessed .map.
-        const sorted = [...scanState.results].sort((a, b) => {
-          const score = x =>
-            (x.commentMatch ? 100 : 0) +
-            (x.commentValid ? 40 : 0) +
-            (x.guessValid ? 20 : 0) +
-            (x.mapHasSources ? 10 : 0);
-          return score(b) - score(a);
+        const response = await fetch(proxy, {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal
         });
 
-        for (const item of sorted) {
-          const row = document.createElement("article");
-          row.className = "map-result" +
-            ((item.commentValid || item.guessValid) ? " good" : "");
-
-          const head = document.createElement("div");
-          head.className = "map-result-head";
-
-          const title = document.createElement("div");
-          title.className = "map-result-title";
-
-          const link = document.createElement("a");
-          link.href = item.jsUrl;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.textContent = item.jsUrl;
-          title.appendChild(link);
-
-          const badge = document.createElement("span");
-          badge.className = "map-badge " +
-            ((item.commentValid || item.guessValid) ? "found" : "");
-          badge.textContent = item.commentValid
-            ? "COMMENT MAP ✓"
-            : item.guessValid
-              ? ".MAP FOUND"
-              : "NO MAP";
-
-          head.appendChild(title);
-          head.appendChild(badge);
-          row.appendChild(head);
-
-          const body = document.createElement("div");
-          body.className = "map-result-body";
-
-          const guessed = document.createElement("div");
-          guessed.textContent = "Guessed: " + item.guessUrl;
-          body.appendChild(guessed);
-
-          if (item.commentMatch) {
-            const match = document.createElement("div");
-            match.className = "map-match";
-            match.innerHTML = "<strong>Source-map comment:</strong> ";
-            const code = document.createElement("code");
-            code.textContent = item.commentMatch.raw;
-            match.appendChild(code);
-            body.appendChild(match);
-
-            const resolved = document.createElement("div");
-            resolved.textContent = "Resolved map: " + item.commentMatch.url;
-            body.appendChild(resolved);
-          }
-
-          if (item.commentValid) {
-            const detail = document.createElement("div");
-            detail.className = "map-match";
-            detail.textContent =
-              `Comment map is valid${item.mapSources != null ? ` • ${item.mapSources} sources` : ""}.`;
-            body.appendChild(detail);
-          } else if (item.guessValid) {
-            const detail = document.createElement("div");
-            detail.className = "map-match";
-            detail.textContent =
-              `Guessed .map is valid${item.mapSources != null ? ` • ${item.mapSources} sources` : ""}.`;
-            body.appendChild(detail);
-          } else if (item.error) {
-            const error = document.createElement("div");
-            error.className = "map-error";
-            error.textContent = item.error;
-            body.appendChild(error);
-          }
-
-          row.appendChild(body);
-          box.appendChild(row);
-        }
-      }
-
-      function updateScanSummary(total, comments, validMaps, failures) {
-        $("scanSummary").hidden = false;
-        $("scanSummary").innerHTML = `
-          <div class="scan-stat"><b>${total}</b><span>JS files</span></div>
-          <div class="scan-stat"><b>${comments}</b><span>Map comments</span></div>
-          <div class="scan-stat"><b>${validMaps}</b><span>Valid maps</span></div>
-          <div class="scan-stat"><b>${failures}</b><span>Fetch failures</span></div>
-        `;
-      }
-
-      async function scanOneJs(jsUrl, pageUrl) {
-        const result = {
-          jsUrl,
-          guessUrl: jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map"),
-          commentMatch: null,
-          commentValid: false,
-          guessValid: false,
-          mapSources: null,
-          error: ""
-        };
-
-        try {
-          const jsText = await fetchText(jsUrl);
-          const comments = sourceMapFromComment(jsText, jsUrl);
-
-          if (comments.length) {
-            // Keep the last comment because sourceMappingURL is normally at EOF.
-            result.commentMatch = comments[comments.length - 1];
-
-            if (result.commentMatch.embedded) {
-              const map = decodeDataMap(result.commentMatch.raw);
-              result.commentValid = !!map;
-              result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
-            } else {
-              try {
-                const mapText = await fetchText(result.commentMatch.url);
-                const map = JSON.parse(mapText);
-                result.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
-                result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
-              } catch (_) {
-                result.commentValid = false;
-              }
-            }
-          }
-
-          // Always also test the conventional JS -> JS.map URL.
-          try {
-            const mapText = await fetchText(result.guessUrl);
-            const map = JSON.parse(mapText);
-            result.guessValid = !!map && (map.version === 3 || Array.isArray(map.sources));
-            if (result.guessValid && result.mapSources == null) {
-              result.mapSources = Array.isArray(map.sources) ? map.sources.length : null;
-            }
-          } catch (_) {
-            // Expected when a bundle has no conventional .js.map.
-          }
-
-          if (!result.commentMatch && !result.guessValid) {
-            result.error = "No usable source map found.";
-          }
-        } catch (e) {
-          result.error = `Could not fetch JS: ${e.message || e}`;
+        if (!response.ok) {
+          throw new Error(`Proxy HTTP ${response.status}`);
         }
 
-        return result;
+        return await response.text();
+
+      } finally {
+        clearTimeout(timer);
       }
+    }
 
-      async function runSiteScan() {
-        if (scanState.running) return;
+    function extractScriptUrls(htmlText, pageUrl) {
+      const doc = new DOMParser().parseFromString(htmlText, "text/html");
+      return [...doc.querySelectorAll("script[src]")]
+        .map(script => absoluteUrl(script.getAttribute("src"), pageUrl))
+        .filter(Boolean);
+    }
 
-        let pageUrl;
-        try {
-          pageUrl = normalizeUrl($("scanUrl").value);
-        } catch (e) {
-          $("scanProgressText").textContent = e.message;
-          return;
+    function decodeDataMap(dataUrl) {
+      try {
+        const comma = dataUrl.indexOf(",");
+        if (comma < 0) return null;
+
+        const meta = dataUrl.slice(0, comma);
+        const data = dataUrl.slice(comma + 1);
+
+        if (/;base64/i.test(meta)) {
+          return JSON.parse(atob(data));
         }
 
-        scanState.running = true;
-        scanState.stop = false;
-        scanState.results = [];
+        return JSON.parse(decodeURIComponent(data));
+      } catch (_) {
+        return null;
+      }
+    }
 
-        $("scanBtn").disabled = true;
-        $("stopScanBtn").disabled = false;
-        $("scanSummary").hidden = true;
-        $("mapResults").innerHTML = '<div class="scan-empty">Starting scan...</div>';
+    async function loadScannedMapToViewer(item) {
+      try {
+        setStatus("Loading scanned source map into viewer...");
+        let mapObj = null;
 
-        try {
-          $("scanProgressText").textContent = "Fetching page HTML...";
-          const pageHtml = await fetchText(pageUrl.href);
-
-          const scriptUrls = extractScriptUrls(pageHtml, pageUrl.href);
-          const sameOrigin = $("sameOriginOnly").checked;
-
-          let urls = [...new Set(scriptUrls)].filter(url =>
-            /\.m?js(?:[?#].*)?$/i.test(url)
-          );
-
-          if (sameOrigin) {
-            urls = urls.filter(url => {
-              try {
-                return new URL(url).origin === pageUrl.origin;
-              } catch (_) {
-                return false;
-              }
-            });
-          }
-
-          if ($("scanInline").checked) {
-            const doc = new DOMParser().parseFromString(pageHtml, "text/html");
-            const inline = [...doc.querySelectorAll("script:not([src])")]
-              .map((s, i) => ({
-                url: pageUrl.href + "#inline-script-" + (i + 1),
-                text: s.textContent || ""
-              }))
-              .filter(x => /sourceMappingURL\s*=/.test(x.text));
-
-            // Inline scripts cannot be fetched by URL, so handle them separately below.
-            for (const x of inline) {
-              const comments = sourceMapFromComment(x.text, pageUrl.href);
-              scanState.results.push({
-                jsUrl: x.url,
-                guessUrl: "n/a (inline script)",
-                commentMatch: comments[comments.length - 1] || null,
-                commentValid: false,
-                guessValid: false,
-                mapSources: null,
-                error: "Inline script: source-map comment found; map validation is attempted below."
-              });
-
-              const last = scanState.results[scanState.results.length - 1];
-              if (last.commentMatch?.embedded) {
-                const map = decodeDataMap(last.commentMatch.raw);
-                last.commentValid = !!map;
-                last.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
-                last.error = last.commentValid ? "" : "Invalid embedded source map.";
-              } else if (last.commentMatch?.url) {
-                try {
-                  const mapText = await fetchText(last.commentMatch.url);
-                  const map = JSON.parse(mapText);
-                  last.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
-                  last.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
-                  last.error = last.commentValid ? "" : "Referenced file is not a valid source map.";
-                } catch (e) {
-                  last.error = "Could not fetch referenced inline-script map.";
-                }
-              }
-            }
-          }
-
-          $("scanProgressText").textContent =
-            `Found ${urls.length} external JavaScript file(s). Checking maps...`;
-
-          // Small concurrency limit so a large page does not launch hundreds of requests at once.
-          const concurrency = 4;
-          let next = 0;
-
-          async function worker() {
-            while (!scanState.stop) {
-              const index = next++;
-              if (index >= urls.length) return;
-
-              const jsUrl = urls[index];
-              $("scanProgressText").textContent =
-                `Checking ${index + 1}/${urls.length}: ${jsUrl}`;
-
-              const result = await scanOneJs(jsUrl, pageUrl.href);
-              scanState.results.push(result);
-              renderScanResults();
-
-              const total = scanState.results.length;
-              const comments = scanState.results.filter(x => x.commentMatch).length;
-              const validMaps = scanState.results.filter(x => x.commentValid || x.guessValid).length;
-              const failures = scanState.results.filter(x => x.error && !x.commentMatch).length;
-              updateScanSummary(total, comments, validMaps, failures);
-            }
-          }
-
-          await Promise.all(Array.from(
-            { length: Math.min(concurrency, urls.length || 1) },
-            worker
-          ));
-
-          if (scanState.stop) {
-            $("scanProgressText").textContent = "Scan stopped.";
+        if (item.commentValid && item.commentMatch) {
+          if (item.commentMatch.embedded) {
+            mapObj = decodeDataMap(item.commentMatch.raw);
           } else {
-            $("scanProgressText").textContent =
-              `Finished. Checked ${urls.length} external JavaScript file(s).`;
+            const text = await fetchText(item.commentMatch.url);
+            mapObj = JSON.parse(text);
           }
-        } catch (e) {
-          $("scanProgressText").textContent =
-            `Scan failed: ${e.message || e}. This browser page needs CORS permission from the target site.`;
-        } finally {
-          scanState.running = false;
-          $("scanBtn").disabled = false;
-          $("stopScanBtn").disabled = true;
+        } else if (item.guessValid) {
+          const text = await fetchText(item.guessUrl);
+          mapObj = JSON.parse(text);
         }
+
+        if (mapObj) {
+          const mapName = item.jsUrl.split('/').pop() + ".map";
+          parseAndLoadMapData(mapObj, mapName);
+        } else {
+          setStatus("Could not load map data for this item.");
+        }
+      } catch (err) {
+        setStatus("Failed loading map into viewer: " + err.message);
+      }
+    }
+
+    function renderScanResults() {
+      const box = $("mapResults");
+      box.innerHTML = "";
+
+      if (!scanState.results.length) {
+        box.innerHTML = '<div class="scan-empty">No JavaScript files were found.</div>';
+        return;
       }
 
-      $("scanBtn").addEventListener("click", runSiteScan);
-
-      $("stopScanBtn").addEventListener("click", () => {
-        scanState.stop = true;
-        $("scanProgressText").textContent = "Stopping after the current request...";
+      const sorted = [...scanState.results].sort((a, b) => {
+        const score = x =>
+          (x.commentMatch ? 100 : 0) +
+          (x.commentValid ? 40 : 0) +
+          (x.guessValid ? 20 : 0) +
+          (x.mapHasSources ? 10 : 0);
+        return score(b) - score(a);
       });
 
-      $("scanUrl").addEventListener("keydown", e => {
-        if (e.key === "Enter") runSiteScan();
-      });
+      for (const item of sorted) {
+        const row = document.createElement("article");
+        row.className = "map-result" + ((item.commentValid || item.guessValid) ? " good" : "");
 
-    </script>
+        const head = document.createElement("div");
+        head.className = "map-result-head";
+
+        const title = document.createElement("div");
+        title.className = "map-result-title";
+
+        const link = document.createElement("a");
+        link.href = item.jsUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = item.jsUrl;
+        title.appendChild(link);
+
+        const badge = document.createElement("span");
+        badge.className = "map-badge " + ((item.commentValid || item.guessValid) ? "found" : "");
+        badge.textContent = item.commentValid
+          ? "COMMENT MAP ✓"
+          : item.guessValid
+            ? ".MAP FOUND"
+            : "NO MAP";
+
+        head.appendChild(title);
+        head.appendChild(badge);
+        row.appendChild(head);
+
+        const body = document.createElement("div");
+        body.className = "map-result-body";
+
+        const guessed = document.createElement("div");
+        guessed.textContent = "Guessed: " + item.guessUrl;
+        body.appendChild(guessed);
+
+        if (item.commentMatch) {
+          const match = document.createElement("div");
+          match.className = "map-match";
+          match.innerHTML = "<strong>Source-map comment:</strong> ";
+          const code = document.createElement("code");
+          code.textContent = item.commentMatch.raw;
+          match.appendChild(code);
+          body.appendChild(match);
+
+          const resolved = document.createElement("div");
+          resolved.textContent = "Resolved map: " + item.commentMatch.url;
+          body.appendChild(resolved);
+        }
+
+        if (item.commentValid || item.guessValid) {
+          const detail = document.createElement("div");
+          detail.className = "map-match";
+          const sourceCountStr = item.mapSources != null ? ` • ${item.mapSources} sources` : "";
+          detail.textContent = item.commentValid
+            ? `Comment map is valid${sourceCountStr}.`
+            : `Guessed .map is valid${sourceCountStr}.`;
+          body.appendChild(detail);
+
+          const actionsDiv = document.createElement("div");
+          actionsDiv.className = "map-actions";
+
+          const loadBtn = document.createElement("button");
+          loadBtn.className = "small-btn";
+          loadBtn.textContent = "⚡ Load into Viewer";
+          loadBtn.addEventListener("click", () => loadScannedMapToViewer(item));
+          actionsDiv.appendChild(loadBtn);
+
+          body.appendChild(actionsDiv);
+        } else if (item.error) {
+          const error = document.createElement("div");
+          error.className = "map-error";
+          error.textContent = item.error;
+          body.appendChild(error);
+        }
+
+        row.appendChild(body);
+        box.appendChild(row);
+      }
+    }
+
+    function updateScanSummary(total, comments, validMaps, failures) {
+      $("scanSummary").hidden = false;
+      $("scanSummary").innerHTML = `
+        <div class="scan-stat"><b>${total}</b><span>JS files</span></div>
+        <div class="scan-stat"><b>${comments}</b><span>Map comments</span></div>
+        <div class="scan-stat"><b>${validMaps}</b><span>Valid maps</span></div>
+        <div class="scan-stat"><b>${failures}</b><span>Fetch failures</span></div>
+      `;
+    }
+
+    async function scanOneJs(jsUrl, pageUrl) {
+      const result = {
+        jsUrl,
+        guessUrl: jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map"),
+        commentMatch: null,
+        commentValid: false,
+        guessValid: false,
+        mapSources: null,
+        error: ""
+      };
+
+      try {
+        const jsText = await fetchText(jsUrl);
+        const comments = sourceMapFromComment(jsText, jsUrl);
+
+        if (comments.length) {
+          result.commentMatch = comments[comments.length - 1];
+
+          if (result.commentMatch.embedded) {
+            const map = decodeDataMap(result.commentMatch.raw);
+            result.commentValid = !!map;
+            result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+          } else {
+            try {
+              const mapText = await fetchText(result.commentMatch.url);
+              const map = JSON.parse(mapText);
+              result.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+              result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+            } catch (_) {
+              result.commentValid = false;
+            }
+          }
+        }
+
+        try {
+          const mapText = await fetchText(result.guessUrl);
+          const map = JSON.parse(mapText);
+          result.guessValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+          if (result.guessValid && result.mapSources == null) {
+            result.mapSources = Array.isArray(map.sources) ? map.sources.length : null;
+          }
+        } catch (_) {}
+
+        if (!result.commentMatch && !result.guessValid) {
+          result.error = "No usable source map found.";
+        }
+      } catch (e) {
+        result.error = `Could not fetch JS: ${e.message || e}`;
+      }
+
+      return result;
+    }
+
+    async function runSiteScan() {
+      if (scanState.running) return;
+
+      let pageUrl;
+      try {
+        pageUrl = normalizeUrl($("scanUrl").value);
+      } catch (e) {
+        $("scanProgressText").textContent = e.message;
+        return;
+      }
+
+      scanState.running = true;
+      scanState.stop = false;
+      scanState.results = [];
+
+      $("scanBtn").disabled = true;
+      $("stopScanBtn").disabled = false;
+      $("scanSummary").hidden = true;
+      $("mapResults").innerHTML = '<div class="scan-empty">Starting scan...</div>';
+
+      try {
+        $("scanProgressText").textContent = "Fetching page HTML...";
+        const pageHtml = await fetchText(pageUrl.href);
+
+        const scriptUrls = extractScriptUrls(pageHtml, pageUrl.href);
+        const sameOrigin = $("sameOriginOnly").checked;
+
+        let urls = [...new Set(scriptUrls)].filter(url =>
+          /\.m?js(?:[?#].*)?$/i.test(url)
+        );
+
+        if (sameOrigin) {
+          urls = urls.filter(url => {
+            try {
+              return new URL(url).origin === pageUrl.origin;
+            } catch (_) {
+              return false;
+            }
+          });
+        }
+
+        if ($("scanInline").checked) {
+          const doc = new DOMParser().parseFromString(pageHtml, "text/html");
+          const inline = [...doc.querySelectorAll("script:not([src])")]
+            .map((s, i) => ({
+              url: pageUrl.href + "#inline-script-" + (i + 1),
+              text: s.textContent || ""
+            }))
+            .filter(x => /sourceMappingURL\s*=/.test(x.text));
+
+          for (const x of inline) {
+            const comments = sourceMapFromComment(x.text, pageUrl.href);
+            scanState.results.push({
+              jsUrl: x.url,
+              guessUrl: "n/a (inline script)",
+              commentMatch: comments[comments.length - 1] || null,
+              commentValid: false,
+              guessValid: false,
+              mapSources: null,
+              error: "Inline script: source-map comment found."
+            });
+
+            const last = scanState.results[scanState.results.length - 1];
+            if (last.commentMatch?.embedded) {
+              const map = decodeDataMap(last.commentMatch.raw);
+              last.commentValid = !!map;
+              last.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+              last.error = last.commentValid ? "" : "Invalid embedded source map.";
+            } else if (last.commentMatch?.url) {
+              try {
+                const mapText = await fetchText(last.commentMatch.url);
+                const map = JSON.parse(mapText);
+                last.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+                last.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+                last.error = last.commentValid ? "" : "Referenced file is not a valid source map.";
+              } catch (e) {
+                last.error = "Could not fetch referenced inline-script map.";
+              }
+            }
+          }
+        }
+
+        $("scanProgressText").textContent =
+          `Found ${urls.length} external JavaScript file(s). Checking maps...`;
+
+        const concurrency = 4;
+        let next = 0;
+
+        async function worker() {
+          while (!scanState.stop) {
+            const index = next++;
+            if (index >= urls.length) return;
+
+            const jsUrl = urls[index];
+            $("scanProgressText").textContent =
+              `Checking ${index + 1}/${urls.length}: ${jsUrl}`;
+
+            const result = await scanOneJs(jsUrl, pageUrl.href);
+            scanState.results.push(result);
+            renderScanResults();
+
+            const total = scanState.results.length;
+            const comments = scanState.results.filter(x => x.commentMatch).length;
+            const validMaps = scanState.results.filter(x => x.commentValid || x.guessValid).length;
+            const failures = scanState.results.filter(x => x.error && !x.commentMatch).length;
+            updateScanSummary(total, comments, validMaps, failures);
+          }
+        }
+
+        await Promise.all(Array.from(
+          { length: Math.min(concurrency, urls.length || 1) },
+          worker
+        ));
+
+        if (scanState.stop) {
+          $("scanProgressText").textContent = "Scan stopped.";
+        } else {
+          $("scanProgressText").textContent =
+            `Finished. Checked ${urls.length} external JavaScript file(s).`;
+        }
+      } catch (e) {
+        $("scanProgressText").textContent =
+          `Scan failed: ${e.message || e}.`;
+      } finally {
+        scanState.running = false;
+        $("scanBtn").disabled = false;
+        $("stopScanBtn").disabled = true;
+      }
+    }
+
+    $("scanBtn").addEventListener("click", runSiteScan);
+
+    $("stopScanBtn").addEventListener("click", () => {
+      scanState.stop = true;
+      $("scanProgressText").textContent = "Stopping after the current request...";
+    });
+
+    $("scanUrl").addEventListener("keydown", e => {
+      if (e.key === "Enter") runSiteScan();
+    });
+  </script>
+</body>
+</html>
