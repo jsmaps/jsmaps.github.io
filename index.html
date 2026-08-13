@@ -455,16 +455,16 @@
     }
 
     /* Fixed height + forced scrollbar so site size never increases */
-    .map-results {
-      margin-top: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      height: 480px;
-      max-height: 480px;
-      overflow-y: scroll;
-      padding-right: 6px;
-    }
+    /* Dynamic height: starts small, grows with content up to 480px max, then scrolls */
+.map-results {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
 
     .scan-empty {
       padding: 25px;
@@ -637,10 +637,12 @@
       <button id="loadBtn">Load Source Map</button>
       <button id="downloadJsBtn" disabled class="secondary">Download JS</button>
       <button id="downloadMapBtn" disabled class="secondary">Download .map</button>
-      <button id="downloadAllZipBtn" class="warning" disabled>📦 Download All to ZIP</button>
+      
       <div class="zip-export-group">
+        
         <input id="zipNameInput" class="zip-input" disabled placeholder="Name?">
         <button id="zipBtn" disabled>Download Custom ZIP</button>
+        <button id="downloadAllZipBtn" class="warning" disabled>Download All to ZIP</button>
       </div>
     </div>
 
