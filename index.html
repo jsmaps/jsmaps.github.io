@@ -331,6 +331,207 @@
         background: var(--secondary-hover)
       }
 
+
+      .auto-scan {
+        background: linear-gradient(180deg, rgba(17,24,39,.98), rgba(13,19,34,.98));
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.18);
+      }
+
+      .auto-scan-head h2 {
+        margin: 0 0 5px;
+        font-size: 17px;
+        color: #fff;
+      }
+
+      .auto-scan-head p {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .auto-scan code {
+        color: var(--accent-blue);
+      }
+
+      .scan-controls {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .scan-url {
+        flex: 1;
+        min-width: 0;
+        background: #090d16;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        color: var(--text-main);
+        padding: 10px 13px;
+        outline: none;
+        font-size: 13px;
+      }
+
+      .scan-url:focus {
+        border-color: var(--border-focus);
+        box-shadow: 0 0 0 2px rgba(59,130,246,.12);
+      }
+
+      .scan-options {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin-top: 11px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .scan-options label {
+        cursor: pointer;
+      }
+
+      .scan-progress {
+        margin-top: 14px;
+        padding: 9px 12px;
+        border-radius: 6px;
+        background: #090d16;
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        font-size: 12px;
+        min-height: 36px;
+      }
+
+      .scan-summary {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+
+      .scan-stat {
+        padding: 10px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: var(--bg-card);
+      }
+
+      .scan-stat b {
+        display: block;
+        font-size: 18px;
+        color: #fff;
+      }
+
+      .scan-stat span {
+        color: var(--text-muted);
+        font-size: 11px;
+      }
+
+      .map-results {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 460px;
+        overflow: auto;
+      }
+
+      .scan-empty {
+        padding: 25px;
+        text-align: center;
+        color: #4b5563;
+        border: 1px dashed var(--border-color);
+        border-radius: 7px;
+      }
+
+      .map-result {
+        border: 1px solid var(--border-color);
+        border-radius: 7px;
+        background: #0d1322;
+        overflow: hidden;
+      }
+
+      .map-result.good {
+        border-color: rgba(37,99,235,.5);
+      }
+
+      .map-result-head {
+        padding: 11px 13px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .map-result-title {
+        min-width: 0;
+        font-family: SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .map-result-title a {
+        color: var(--accent-blue);
+        text-decoration: none;
+      }
+
+      .map-result-title a:hover {
+        text-decoration: underline;
+      }
+
+      .map-badge {
+        flex-shrink: 0;
+        padding: 3px 7px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 700;
+        background: var(--secondary);
+        color: var(--text-muted);
+      }
+
+      .map-badge.found {
+        background: rgba(37,99,235,.2);
+        color: #93c5fd;
+      }
+
+      .map-result-body {
+        padding: 10px 13px;
+        color: var(--text-muted);
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      .map-match {
+        margin-top: 7px;
+        padding: 7px 9px;
+        border-left: 2px solid var(--accent-blue);
+        background: rgba(37,99,235,.07);
+        word-break: break-all;
+      }
+
+      .map-match strong {
+        color: #dbeafe;
+      }
+
+      .map-error {
+        color: #fca5a5;
+      }
+
+      @media (max-width:800px) {
+        .scan-controls {
+          flex-direction: column;
+        }
+        .scan-summary {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
       @media (max-width:800px) {
         .upload-area {
           grid-template-columns: 1fr
@@ -357,6 +558,38 @@
       <p>Load a JavaScript bundle and its source map to inspect and export mapped source files.
     </header>
     <div class=container>
+
+      <section class="auto-scan">
+        <div class="auto-scan-head">
+          <div>
+            <h2>🔎 Automatic Source Map Scanner</h2>
+            <p>Enter a page URL. The scanner discovers JavaScript files, checks each <code>.js.map</code>, and also looks for source-map comments inside the JavaScript.</p>
+          </div>
+        </div>
+
+        <div class="scan-controls">
+          <input id="scanUrl" class="scan-url" type="url"
+            placeholder="https://example.com/"
+            autocomplete="off">
+          <button id="scanBtn">Scan Site</button>
+          <button id="stopScanBtn" class="secondary" disabled>Stop</button>
+        </div>
+
+        <div class="scan-options">
+          <label><input id="sameOriginOnly" type="checkbox" checked> Same-origin JS only</label>
+          <label><input id="scanInline" type="checkbox" checked> Scan inline scripts</label>
+        </div>
+
+        <div id="scanProgress" class="scan-progress">
+          <span id="scanProgressText">Ready to scan.</span>
+        </div>
+
+        <div class="scan-summary" id="scanSummary" hidden></div>
+        <div class="map-results" id="mapResults">
+          <div class="scan-empty">No scan results yet.</div>
+        </div>
+      </section>
+
       <div class=upload-area><label class=drop-box><input id=jsFile accept=.js,.mjs,.cjs,text/javascript type=file><strong>📄 Select JavaScript</strong><span id=jsName>Choose a .js file</span></label><label class=drop-box><input id=mapFile accept=.map,application/json type=file><strong>🗺️ Select Source Map</strong><span id=mapName>Choose a .js.map file</span></label></div>
       <div class=actions><button id=loadBtn>Load Source Map</button><button id=downloadJsBtn disabled class=secondary>Download JS</button><button id=downloadMapBtn disabled class=secondary>Download .map</button>
         <div class=zip-export-group><input id=zipNameInput class=zip-input disabled placeholder=Name?><button id=zipBtn disabled>Download ZIP</button></div>
@@ -481,4 +714,432 @@
           } else setStatus("No embedded sourceContent was found, so there is nothing to export.")
         }
       })
+
+      /* Automatic site source-map scanner */
+      const scanState = {
+        running: false,
+        stop: false,
+        results: []
+      };
+
+      const $ = id => document.getElementById(id);
+
+      function normalizeUrl(raw) {
+        const value = raw.trim();
+        if (!value) throw new Error("Enter a URL first.");
+        return new URL(/^https?:\/\//i.test(value) ? value : "https://" + value);
+      }
+
+      function absoluteUrl(value, base) {
+        try {
+          return new URL(value, base).href;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function sourceMapFromComment(jsText, jsUrl) {
+        /*
+         * Supports the standard forms:
+         *   //# sourceMappingURL=file.js.map
+         *   //@ sourceMappingURL=file.js.map
+         * and equivalent block-comment forms.
+         */
+        const re = /(?:\/\/[#@]\s*sourceMappingURL\s*=\s*([^\s*]+)|\/\*[#@]\s*sourceMappingURL\s*=\s*([^*]+?)\s*\*\/)/gi;
+        const matches = [];
+        let m;
+
+        while ((m = re.exec(jsText))) {
+          const raw = (m[1] || m[2] || "").trim();
+          if (!raw) continue;
+
+          // Data URLs are maps embedded directly in the JS.
+          if (/^data:application\/json/i.test(raw)) {
+            matches.push({
+              url: jsUrl,
+              raw,
+              embedded: true,
+              index: m.index
+            });
+            continue;
+          }
+
+          const resolved = absoluteUrl(raw, jsUrl);
+          if (resolved) {
+            matches.push({
+              url: resolved,
+              raw,
+              embedded: false,
+              index: m.index
+            });
+          }
+        }
+
+        return matches;
+      }
+
+      async function fetchText(url, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const PROXY_URL = "https://cors-proxy-gold-iota.vercel.app/api/fetch";
+  try {
+    const proxy = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
+
+    const response = await fetch(proxy, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Proxy HTTP ${response.status}`);
+    }
+
+    return await response.text();
+
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+      function extractScriptUrls(htmlText, pageUrl) {
+        const doc = new DOMParser().parseFromString(htmlText, "text/html");
+        return [...doc.querySelectorAll("script[src]")]
+          .map(script => absoluteUrl(script.getAttribute("src"), pageUrl))
+          .filter(Boolean);
+      }
+
+      function decodeDataMap(dataUrl) {
+        try {
+          const comma = dataUrl.indexOf(",");
+          if (comma < 0) return null;
+
+          const meta = dataUrl.slice(0, comma);
+          const data = dataUrl.slice(comma + 1);
+
+          if (/;base64/i.test(meta)) {
+            return JSON.parse(atob(data));
+          }
+
+          return JSON.parse(decodeURIComponent(data));
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function mapLooksValid(text) {
+        try {
+          const obj = JSON.parse(text);
+          return !!obj && typeof obj === "object" &&
+            (obj.version === 3 || Array.isArray(obj.sources));
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function renderScanResults() {
+        const box = $("mapResults");
+        box.innerHTML = "";
+
+        if (!scanState.results.length) {
+          box.innerHTML = '<div class="scan-empty">No JavaScript files were found.</div>';
+          return;
+        }
+
+        // Strongest matches first: explicit comment, then valid guessed .map.
+        const sorted = [...scanState.results].sort((a, b) => {
+          const score = x =>
+            (x.commentMatch ? 100 : 0) +
+            (x.commentValid ? 40 : 0) +
+            (x.guessValid ? 20 : 0) +
+            (x.mapHasSources ? 10 : 0);
+          return score(b) - score(a);
+        });
+
+        for (const item of sorted) {
+          const row = document.createElement("article");
+          row.className = "map-result" +
+            ((item.commentValid || item.guessValid) ? " good" : "");
+
+          const head = document.createElement("div");
+          head.className = "map-result-head";
+
+          const title = document.createElement("div");
+          title.className = "map-result-title";
+
+          const link = document.createElement("a");
+          link.href = item.jsUrl;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = item.jsUrl;
+          title.appendChild(link);
+
+          const badge = document.createElement("span");
+          badge.className = "map-badge " +
+            ((item.commentValid || item.guessValid) ? "found" : "");
+          badge.textContent = item.commentValid
+            ? "COMMENT MAP ✓"
+            : item.guessValid
+              ? ".MAP FOUND"
+              : "NO MAP";
+
+          head.appendChild(title);
+          head.appendChild(badge);
+          row.appendChild(head);
+
+          const body = document.createElement("div");
+          body.className = "map-result-body";
+
+          const guessed = document.createElement("div");
+          guessed.textContent = "Guessed: " + item.guessUrl;
+          body.appendChild(guessed);
+
+          if (item.commentMatch) {
+            const match = document.createElement("div");
+            match.className = "map-match";
+            match.innerHTML = "<strong>Source-map comment:</strong> ";
+            const code = document.createElement("code");
+            code.textContent = item.commentMatch.raw;
+            match.appendChild(code);
+            body.appendChild(match);
+
+            const resolved = document.createElement("div");
+            resolved.textContent = "Resolved map: " + item.commentMatch.url;
+            body.appendChild(resolved);
+          }
+
+          if (item.commentValid) {
+            const detail = document.createElement("div");
+            detail.className = "map-match";
+            detail.textContent =
+              `Comment map is valid${item.mapSources != null ? ` • ${item.mapSources} sources` : ""}.`;
+            body.appendChild(detail);
+          } else if (item.guessValid) {
+            const detail = document.createElement("div");
+            detail.className = "map-match";
+            detail.textContent =
+              `Guessed .map is valid${item.mapSources != null ? ` • ${item.mapSources} sources` : ""}.`;
+            body.appendChild(detail);
+          } else if (item.error) {
+            const error = document.createElement("div");
+            error.className = "map-error";
+            error.textContent = item.error;
+            body.appendChild(error);
+          }
+
+          row.appendChild(body);
+          box.appendChild(row);
+        }
+      }
+
+      function updateScanSummary(total, comments, validMaps, failures) {
+        $("scanSummary").hidden = false;
+        $("scanSummary").innerHTML = `
+          <div class="scan-stat"><b>${total}</b><span>JS files</span></div>
+          <div class="scan-stat"><b>${comments}</b><span>Map comments</span></div>
+          <div class="scan-stat"><b>${validMaps}</b><span>Valid maps</span></div>
+          <div class="scan-stat"><b>${failures}</b><span>Fetch failures</span></div>
+        `;
+      }
+
+      async function scanOneJs(jsUrl, pageUrl) {
+        const result = {
+          jsUrl,
+          guessUrl: jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map"),
+          commentMatch: null,
+          commentValid: false,
+          guessValid: false,
+          mapSources: null,
+          error: ""
+        };
+
+        try {
+          const jsText = await fetchText(jsUrl);
+          const comments = sourceMapFromComment(jsText, jsUrl);
+
+          if (comments.length) {
+            // Keep the last comment because sourceMappingURL is normally at EOF.
+            result.commentMatch = comments[comments.length - 1];
+
+            if (result.commentMatch.embedded) {
+              const map = decodeDataMap(result.commentMatch.raw);
+              result.commentValid = !!map;
+              result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+            } else {
+              try {
+                const mapText = await fetchText(result.commentMatch.url);
+                const map = JSON.parse(mapText);
+                result.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+                result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+              } catch (_) {
+                result.commentValid = false;
+              }
+            }
+          }
+
+          // Always also test the conventional JS -> JS.map URL.
+          try {
+            const mapText = await fetchText(result.guessUrl);
+            const map = JSON.parse(mapText);
+            result.guessValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+            if (result.guessValid && result.mapSources == null) {
+              result.mapSources = Array.isArray(map.sources) ? map.sources.length : null;
+            }
+          } catch (_) {
+            // Expected when a bundle has no conventional .js.map.
+          }
+
+          if (!result.commentMatch && !result.guessValid) {
+            result.error = "No usable source map found.";
+          }
+        } catch (e) {
+          result.error = `Could not fetch JS: ${e.message || e}`;
+        }
+
+        return result;
+      }
+
+      async function runSiteScan() {
+        if (scanState.running) return;
+
+        let pageUrl;
+        try {
+          pageUrl = normalizeUrl($("scanUrl").value);
+        } catch (e) {
+          $("scanProgressText").textContent = e.message;
+          return;
+        }
+
+        scanState.running = true;
+        scanState.stop = false;
+        scanState.results = [];
+
+        $("scanBtn").disabled = true;
+        $("stopScanBtn").disabled = false;
+        $("scanSummary").hidden = true;
+        $("mapResults").innerHTML = '<div class="scan-empty">Starting scan...</div>';
+
+        try {
+          $("scanProgressText").textContent = "Fetching page HTML...";
+          const pageHtml = await fetchText(pageUrl.href);
+
+          const scriptUrls = extractScriptUrls(pageHtml, pageUrl.href);
+          const sameOrigin = $("sameOriginOnly").checked;
+
+          let urls = [...new Set(scriptUrls)].filter(url =>
+            /\.m?js(?:[?#].*)?$/i.test(url)
+          );
+
+          if (sameOrigin) {
+            urls = urls.filter(url => {
+              try {
+                return new URL(url).origin === pageUrl.origin;
+              } catch (_) {
+                return false;
+              }
+            });
+          }
+
+          if ($("scanInline").checked) {
+            const doc = new DOMParser().parseFromString(pageHtml, "text/html");
+            const inline = [...doc.querySelectorAll("script:not([src])")]
+              .map((s, i) => ({
+                url: pageUrl.href + "#inline-script-" + (i + 1),
+                text: s.textContent || ""
+              }))
+              .filter(x => /sourceMappingURL\s*=/.test(x.text));
+
+            // Inline scripts cannot be fetched by URL, so handle them separately below.
+            for (const x of inline) {
+              const comments = sourceMapFromComment(x.text, pageUrl.href);
+              scanState.results.push({
+                jsUrl: x.url,
+                guessUrl: "n/a (inline script)",
+                commentMatch: comments[comments.length - 1] || null,
+                commentValid: false,
+                guessValid: false,
+                mapSources: null,
+                error: "Inline script: source-map comment found; map validation is attempted below."
+              });
+
+              const last = scanState.results[scanState.results.length - 1];
+              if (last.commentMatch?.embedded) {
+                const map = decodeDataMap(last.commentMatch.raw);
+                last.commentValid = !!map;
+                last.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+                last.error = last.commentValid ? "" : "Invalid embedded source map.";
+              } else if (last.commentMatch?.url) {
+                try {
+                  const mapText = await fetchText(last.commentMatch.url);
+                  const map = JSON.parse(mapText);
+                  last.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+                  last.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+                  last.error = last.commentValid ? "" : "Referenced file is not a valid source map.";
+                } catch (e) {
+                  last.error = "Could not fetch referenced inline-script map.";
+                }
+              }
+            }
+          }
+
+          $("scanProgressText").textContent =
+            `Found ${urls.length} external JavaScript file(s). Checking maps...`;
+
+          // Small concurrency limit so a large page does not launch hundreds of requests at once.
+          const concurrency = 4;
+          let next = 0;
+
+          async function worker() {
+            while (!scanState.stop) {
+              const index = next++;
+              if (index >= urls.length) return;
+
+              const jsUrl = urls[index];
+              $("scanProgressText").textContent =
+                `Checking ${index + 1}/${urls.length}: ${jsUrl}`;
+
+              const result = await scanOneJs(jsUrl, pageUrl.href);
+              scanState.results.push(result);
+              renderScanResults();
+
+              const total = scanState.results.length;
+              const comments = scanState.results.filter(x => x.commentMatch).length;
+              const validMaps = scanState.results.filter(x => x.commentValid || x.guessValid).length;
+              const failures = scanState.results.filter(x => x.error && !x.commentMatch).length;
+              updateScanSummary(total, comments, validMaps, failures);
+            }
+          }
+
+          await Promise.all(Array.from(
+            { length: Math.min(concurrency, urls.length || 1) },
+            worker
+          ));
+
+          if (scanState.stop) {
+            $("scanProgressText").textContent = "Scan stopped.";
+          } else {
+            $("scanProgressText").textContent =
+              `Finished. Checked ${urls.length} external JavaScript file(s).`;
+          }
+        } catch (e) {
+          $("scanProgressText").textContent =
+            `Scan failed: ${e.message || e}. This browser page needs CORS permission from the target site.`;
+        } finally {
+          scanState.running = false;
+          $("scanBtn").disabled = false;
+          $("stopScanBtn").disabled = true;
+        }
+      }
+
+      $("scanBtn").addEventListener("click", runSiteScan);
+
+      $("stopScanBtn").addEventListener("click", () => {
+        scanState.stop = true;
+        $("scanProgressText").textContent = "Stopping after the current request...";
+      });
+
+      $("scanUrl").addEventListener("keydown", e => {
+        if (e.key === "Enter") runSiteScan();
+      });
+
     </script>
