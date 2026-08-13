@@ -9,13 +9,6 @@
   <title>JS Source Map Viewer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
-          button.warning {
-        background: #d97706; /* Amber / Orange color */
-      }
-      
-      button.warning:hover:not(:disabled) {
-        background: #b45309;
-      }
     :root {
       --bg-main: #090d16;
       --bg-card: #111827;
@@ -180,10 +173,27 @@
       background: var(--secondary-hover)
     }
 
+    /* Distinct Warning / Orange styling for Download All */
+    button.warning {
+      background: #d97706;
+    }
+
+    button.warning:hover:not(:disabled) {
+      background: #b45309;
+      transform: translateY(-1px);
+    }
+
     button.small-btn {
-      padding: 5px 10px;
-      font-size: 11px;
+      padding: 6px 12px;
+      font-size: 12px;
       border-radius: 4px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button.small-btn:hover {
+      background: var(--primary-hover);
     }
 
     button:disabled {
@@ -345,6 +355,7 @@
       background: var(--secondary-hover)
     }
 
+    /* Auto Scan Styling */
     .auto-scan {
       background: linear-gradient(180deg, rgba(17,24,39,.98), rgba(13,19,34,.98));
       border: 1px solid var(--border-color);
@@ -443,14 +454,16 @@
       font-size: 11px;
     }
 
+    /* Fixed height + forced scrollbar so site size never increases */
     .map-results {
-      margin-top: 12px;
+      margin-top: 14px;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-height: 400px;
-      overflow-y: auto;
-      padding-right: 4px;
+      height: 480px;
+      max-height: 480px;
+      overflow-y: scroll;
+      padding-right: 6px;
     }
 
     .scan-empty {
@@ -465,7 +478,7 @@
       border: 1px solid var(--border-color);
       border-radius: 7px;
       background: #0d1322;
-      overflow: hidden;
+      flex-shrink: 0;
     }
 
     .map-result.good {
@@ -624,12 +637,11 @@
       <button id="loadBtn">Load Source Map</button>
       <button id="downloadJsBtn" disabled class="secondary">Download JS</button>
       <button id="downloadMapBtn" disabled class="secondary">Download .map</button>
+      <button id="downloadAllZipBtn" class="warning" disabled>📦 Download All to ZIP</button>
       <div class="zip-export-group">
         <input id="zipNameInput" class="zip-input" disabled placeholder="Name?">
-        <button id="zipBtn" disabled>Download ZIP</button>
-        <button id="downloadAllZipBtn" class="warning" disabled>Download All to ZIP</button>
+        <button id="zipBtn" disabled>Download Custom ZIP</button>
       </div>
-      
     </div>
 
     <div class="status" id="status">Select a JS file and a source map, or scan a site to begin.</div>
@@ -749,9 +761,9 @@
       document.getElementById("downloadJsBtn").disabled = !jsFile;
       document.getElementById("downloadMapBtn").disabled = !mapFile && !mapData;
       var e = 0 < sources.length;
+      document.getElementById("downloadAllZipBtn").disabled = !e;
       document.getElementById("zipBtn").disabled = !e;
       document.getElementById("zipNameInput").disabled = !e;
-      document.getElementById("downloadAllZipBtn").disabled = !(sources.length > 0);
     }
 
     function setStatus(e) {
@@ -811,6 +823,32 @@
           type: "application/json"
         }), "scanned-sourcemap.map");
       }
+    });
+
+    /* Quick Download All to ZIP (Amber Button) */
+    document.getElementById("downloadAllZipBtn").addEventListener("click", async () => {
+      if (!sources.length) return;
+
+      const zip = new JSZip();
+      let fileCount = 0;
+
+      for (const item of sources) {
+        if (item.content !== null) {
+          const fileName = cleanFilename(item.name);
+          zip.file(fileName, item.content);
+          fileCount++;
+        }
+      }
+
+      if (fileCount === 0) {
+        setStatus("No embedded source code found to export.");
+        return;
+      }
+
+      setStatus(`Zipping ${fileCount} mapped source files...`);
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      downloadBlob(zipBlob, "all-sources.zip");
+      setStatus(`Successfully downloaded ZIP with ${fileCount} source files.`);
     });
 
     document.getElementById("zipBtn").addEventListener("click", async () => {
@@ -988,8 +1026,10 @@
       });
 
       for (const item of sorted) {
+        const hasValidMap = item.commentValid || item.guessValid;
+
         const row = document.createElement("article");
-        row.className = "map-result" + ((item.commentValid || item.guessValid) ? " good" : "");
+        row.className = "map-result" + (hasValidMap ? " good" : "");
 
         const head = document.createElement("div");
         head.className = "map-result-head";
@@ -1005,7 +1045,7 @@
         title.appendChild(link);
 
         const badge = document.createElement("span");
-        badge.className = "map-badge " + ((item.commentValid || item.guessValid) ? "found" : "");
+        badge.className = "map-badge " + (hasValidMap ? "found" : "");
         badge.textContent = item.commentValid
           ? "COMMENT MAP ✓"
           : item.guessValid
@@ -1037,7 +1077,7 @@
           body.appendChild(resolved);
         }
 
-        if (item.commentValid || item.guessValid) {
+        if (hasValidMap) {
           const detail = document.createElement("div");
           detail.className = "map-match";
           const sourceCountStr = item.mapSources != null ? ` • ${item.mapSources} sources` : "";
@@ -1271,39 +1311,6 @@
     $("scanUrl").addEventListener("keydown", e => {
       if (e.key === "Enter") runSiteScan();
     });
-    // 1. Click Handler to Zip and Download ALL loaded sources
-document.getElementById("downloadAllZipBtn").addEventListener("click", async () => {
-  if (!sources.length) return;
-
-  const zip = new JSZip();
-  let fileCount = 0;
-
-  for (const item of sources) {
-    if (item.content !== null) {
-      const fileName = cleanFilename(item.name);
-      zip.file(fileName, item.content);
-      fileCount++;
-    }
-  }
-
-  if (fileCount === 0) {
-    setStatus("No embedded source code found to export.");
-    return;
-  }
-
-  setStatus(`Zipping ${fileCount} files...`);
-  const zipBlob = await zip.generateAsync({ type: "blob" });
-  
-  // Uses mapData name if available, otherwise defaults
-  const zipName = mapData?.file 
-    ? `${mapData.file.replace(/\.js$/i, '')}-all-sources.zip` 
-    : "all-sources.zip";
-
-  downloadBlob(zipBlob, zipName);
-  setStatus(`Successfully downloaded ZIP with ${fileCount} source files.`);
-});
-
-
   </script>
 </body>
 </html>
