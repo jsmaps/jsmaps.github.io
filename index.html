@@ -218,6 +218,7 @@
       display: grid;
       grid-template-columns: 320px 1fr;
       height: 650px;
+      min-height: 0;
       border: 1px solid var(--border-color);
       border-radius: var(--radius);
       overflow: hidden;
@@ -253,7 +254,9 @@
       margin: 0;
       padding: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       flex: 1;
+      min-height: 0;
       max-height: 100%
     }
 
@@ -281,6 +284,7 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
+      min-height: 0;
       background: #090d16
     }
 
@@ -307,6 +311,8 @@
       margin: 0;
       padding: 20px;
       flex: 1;
+      min-height: 0;
+      min-width: 0;
       overflow: auto;
       white-space: pre;
       font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
@@ -740,32 +746,73 @@
       document.getElementById("viewerSection").scrollIntoView({ behavior: 'smooth' });
     }
 
-    function downloadBlob(e, t) {
-      const n = URL.createObjectURL(e),
-        o = document.createElement("a");
-      o.href = n;
-      o.download = t;
-      document.body.appendChild(o);
-      o.click();
-      o.remove();
-      setTimeout(() => {
-        URL.revokeObjectURL(n);
-      }, 1000);
+    /* Robust browser download helper.
+       Keeps the existing UI/CSS unchanged and handles filenames that contain
+       paths, query strings, or characters that browsers reject for downloads. */
+    function downloadBlob(blob, filename) {
+      if (!blob) return;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = cleanFilename(filename);
+      a.rel = "noopener";
+      a.style.display = "none";
+
+      document.body.appendChild(a);
+
+      /* click() works in modern browsers; dispatching a real mouse event
+         provides a fallback for browsers that are picky about downloads. */
+      try {
+        a.click();
+      } catch (_) {
+        a.dispatchEvent(new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        }));
+      }
+
+      a.remove();
+
+      /* Give the browser enough time to start large ZIP downloads before
+         releasing the object URL. */
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     }
 
     function cleanFilename(e) {
       if (!e) return "source.txt";
-      let t = e;
-      return t = t.replace(/^webpack:\/\/\/?/, ""), t = t.replace(/^webpack:\/\//, ""), t = t.replace(/^file:\/\/\/?/, ""), t = t.replace(/^\/+/, ""), t = t.replace(/\.\.(\/|\\)/g, ""), t.trim() || (t = "source.txt"), t;
+
+      let t = String(e)
+        .replace(/^webpack:\/\/\/?/, "")
+        .replace(/^webpack:\/\//, "")
+        .replace(/^file:\/\/\/?/, "")
+        .replace(/^\/+/, "")
+        .replace(/\.\.(\/|\\)/g, "");
+
+      /* Download attributes need a filename, not a full path. */
+      t = t.split(/[\\/]/).pop();
+      t = t.split(/[?#]/)[0];
+
+      /* Remove Windows-invalid filename characters and control characters. */
+      t = t.replace(/[<>:"|?*\x00-\x1F]/g, "_").trim();
+
+      return t || "source.txt";
     }
 
     function updateButtons() {
       document.getElementById("downloadJsBtn").disabled = !jsFile;
       document.getElementById("downloadMapBtn").disabled = !mapFile && !mapData;
-      var e = 0 < sources.length;
-      document.getElementById("downloadAllZipBtn").disabled = !e;
-      document.getElementById("zipBtn").disabled = !e;
-      document.getElementById("zipNameInput").disabled = !e;
+
+      /* Download All is for automatic scan results, so enable it as soon
+         as the scan has produced results. */
+      const hasSources = sources.length > 0;
+      const hasScanResults = scanState.results.length > 0;
+
+      document.getElementById("downloadAllZipBtn").disabled = !hasScanResults;
+      document.getElementById("zipBtn").disabled = !hasSources;
+      document.getElementById("zipNameInput").disabled = !hasSources;
     }
 
     function setStatus(e) {
@@ -806,51 +853,158 @@
     });
 
     document.getElementById("downloadJsBtn").addEventListener("click", () => {
-      jsFile && jsFile.arrayBuffer().then(e => {
-        downloadBlob(new Blob([e], {
-          type: jsFile.type || "application/javascript"
-        }), jsFile.name);
-      });
+      if (jsFile) {
+        downloadBlob(jsFile, jsFile.name);
+      }
     });
 
     document.getElementById("downloadMapBtn").addEventListener("click", () => {
       if (mapFile) {
-        mapFile.arrayBuffer().then(e => {
-          downloadBlob(new Blob([e], {
-            type: "application/json"
-          }), mapFile.name);
-        });
+        downloadBlob(mapFile, mapFile.name);
       } else if (mapData) {
         downloadBlob(new Blob([JSON.stringify(mapData, null, 2)], {
-          type: "application/json"
+          type: "application/json;charset=utf-8"
         }), "scanned-sourcemap.map");
       }
     });
 
-    /* Quick Download All to ZIP (Amber Button) */
+    /* Download every result found by the automatic scanner.
+       This is intentionally separate from `sources`, which only contains
+       the source files from the map currently loaded into the viewer. */
     document.getElementById("downloadAllZipBtn").addEventListener("click", async () => {
-      if (!sources.length) return;
+      if (!scanState.results.length) {
+        setStatus("No scanned results to download.");
+        return;
+      }
 
       const zip = new JSZip();
+      const usedNames = new Set();
       let fileCount = 0;
+      let failedCount = 0;
 
-      for (const item of sources) {
-        if (item.content !== null) {
-          const fileName = cleanFilename(item.name);
-          zip.file(fileName, item.content);
+      function uniqueZipName(name) {
+        name = cleanFilename(name) || "file.txt";
+        const dot = name.lastIndexOf(".");
+        const base = dot > 0 ? name.slice(0, dot) : name;
+        const ext = dot > 0 ? name.slice(dot) : "";
+
+        let candidate = name;
+        let i = 2;
+
+        while (usedNames.has(candidate.toLowerCase())) {
+          candidate = `${base}-${i++}${ext}`;
+        }
+
+        usedNames.add(candidate.toLowerCase());
+        return candidate;
+      }
+
+      function resultBaseName(url, fallback) {
+        try {
+          const u = new URL(url);
+          const name = u.pathname.split("/").pop() || fallback;
+          return cleanFilename(name);
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      setStatus(`Preparing ${scanState.results.length} scanned results...`);
+
+      for (let i = 0; i < scanState.results.length; i++) {
+        const item = scanState.results[i];
+
+        /* Inline scripts do not have a separate JS URL to fetch. */
+        if (!item.jsUrl || item.jsUrl.includes("#inline-script-")) {
+          if (item.commentMatch?.embedded) {
+            try {
+              const map = decodeDataMap(item.commentMatch.raw);
+              if (map) {
+                zip.file(
+                  uniqueZipName(`inline-${i + 1}.map`),
+                  JSON.stringify(map, null, 2)
+                );
+                fileCount++;
+              }
+            } catch (_) {
+              failedCount++;
+            }
+          }
+          continue;
+        }
+
+        const jsName = resultBaseName(item.jsUrl, `script-${i + 1}.js`);
+
+        setStatus(
+          `Downloading scanned result ${i + 1}/${scanState.results.length}: ${jsName}`
+        );
+
+        /* Add the original JavaScript file. */
+        try {
+          const jsText = await fetchText(item.jsUrl);
+          zip.file(uniqueZipName(jsName), jsText);
           fileCount++;
+        } catch (_) {
+          failedCount++;
+        }
+
+        /* Use the exact map object found during scanning. This is the same
+           data that "Load into Viewer" passes to parseAndLoadMapData(). */
+        const mapObj = item.mapData || null;
+
+        if (mapObj) {
+          zip.file(
+            uniqueZipName(`${jsName}.map`),
+            JSON.stringify(mapObj, null, 2)
+          );
+          fileCount++;
+
+          /* Export every readable source exactly like the Viewer:
+             mapData.sources[i] + mapData.sourcesContent[i]. */
+          if (Array.isArray(mapObj.sources)) {
+            for (let s = 0; s < mapObj.sources.length; s++) {
+              const content =
+                Array.isArray(mapObj.sourcesContent)
+                  ? mapObj.sourcesContent[s]
+                  : null;
+
+              if (content === null || content === undefined) continue;
+
+              const sourceName = cleanFilename(
+                mapObj.sources[s] || `source-${s + 1}.txt`
+              );
+
+              zip.file(uniqueZipName(sourceName), content);
+              fileCount++;
+            }
+          }
         }
       }
 
       if (fileCount === 0) {
-        setStatus("No embedded source code found to export.");
+        setStatus("Nothing could be downloaded from the scanned results.");
         return;
       }
 
-      setStatus(`Zipping ${fileCount} mapped source files...`);
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      downloadBlob(zipBlob, "all-sources.zip");
-      setStatus(`Successfully downloaded ZIP with ${fileCount} source files.`);
+      setStatus(`Creating ZIP with ${fileCount} files...`);
+
+      try {
+        const zipBlob = await zip.generateAsync({
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: { level: 6 }
+        });
+
+        downloadBlob(zipBlob, "all-scanned-results.zip");
+
+        setStatus(
+          `Successfully downloaded ${fileCount} files from ${scanState.results.length} scanned results` +
+          (failedCount ? ` (${failedCount} could not be fetched).` : ".")
+        );
+      } catch (e) {
+        console.error(e);
+        setStatus("Failed creating ZIP: " + (e.message || e));
+      }
     });
 
     document.getElementById("zipBtn").addEventListener("click", async () => {
@@ -1128,6 +1282,7 @@
         commentValid: false,
         guessValid: false,
         mapSources: null,
+        mapData: null,
         error: ""
       };
 
@@ -1141,12 +1296,14 @@
           if (result.commentMatch.embedded) {
             const map = decodeDataMap(result.commentMatch.raw);
             result.commentValid = !!map;
+            result.mapData = map || null;
             result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
           } else {
             try {
               const mapText = await fetchText(result.commentMatch.url);
               const map = JSON.parse(mapText);
               result.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+              result.mapData = result.commentValid ? map : null;
               result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
             } catch (_) {
               result.commentValid = false;
@@ -1158,6 +1315,9 @@
           const mapText = await fetchText(result.guessUrl);
           const map = JSON.parse(mapText);
           result.guessValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+          if (result.guessValid) {
+            result.mapData = map;
+          }
           if (result.guessValid && result.mapSources == null) {
             result.mapSources = Array.isArray(map.sources) ? map.sources.length : null;
           }
@@ -1255,6 +1415,8 @@
           }
         }
 
+        updateButtons();
+
         $("scanProgressText").textContent =
           `Found ${urls.length} external JavaScript file(s). Checking maps...`;
 
@@ -1273,6 +1435,7 @@
             const result = await scanOneJs(jsUrl, pageUrl.href);
             scanState.results.push(result);
             renderScanResults();
+            updateButtons();
 
             const total = scanState.results.length;
             const comments = scanState.results.filter(x => x.commentMatch).length;
