@@ -576,6 +576,19 @@
       border-radius: 7px;
     }
 
+    /* Link-styled upload report trigger */
+    .upload-link {
+      color: var(--accent-blue);
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 500;
+      transition: color 0.15s ease;
+    }
+
+    .upload-link:hover {
+      color: #93c5fd;
+    }
+
     .map-result {
       border: 1px solid var(--border-color);
       border-radius: 7px;
@@ -740,7 +753,9 @@
 
       <div class="scan-summary" id="scanSummary" hidden></div>
       <div class="map-results" id="mapResults">
-        <div class="scan-empty">No scan results yet.</div>
+        <div class="scan-empty">
+          <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
+        </div>
       </div>
     </section>
 
@@ -830,15 +845,6 @@
       document.getElementById("downloadCurrentBtn").disabled = false;
     }
 
-    /*
-     * Supports both standard Source Maps and indexed Source Maps.
-     *
-     * Standard:
-     *   { sources: [...], sourcesContent: [...] }
-     *
-     * Indexed:
-     *   { sections: [{ offset: {...}, map: {...} }, ...] }
-     */
     function flattenSourceMap(map) {
       const result = [];
 
@@ -861,19 +867,16 @@
         }
       }
 
-      // Standard Source Map
       if (Array.isArray(map?.sources)) {
         addNormalMap(map);
       }
 
-      // Indexed Source Map
       if (Array.isArray(map?.sections)) {
         for (let i = 0; i < map.sections.length; i++) {
           const section = map.sections[i];
 
           if (!section?.map) continue;
 
-          // Also handle nested indexed maps.
           if (Array.isArray(section.map.sections)) {
             const nested = flattenSourceMap(section.map);
             nested.forEach(item => {
@@ -967,26 +970,25 @@
     }
 
     function cleanFilename(e) {
-  if (!e) return "source.txt";
+      if (!e) return "source.txt";
 
-  let t = String(e)
-    .replace(/^webpack:\/\/\/?/, "")
-    .replace(/^webpack:\/\//, "")
-    .replace(/^file:\/\/\/?/, "")
-    .replace(/^\/+/, "")
-    .replace(/\.\.(\/|\\)/g, "");
+      let t = String(e)
+        .replace(/^webpack:\/\/\/?/, "")
+        .replace(/^webpack:\/\//, "")
+        .replace(/^file:\/\/\/?/, "")
+        .replace(/^\/+/, "")
+        .replace(/\.\.(\/|\\)/g, "");
 
-  t = t.split(/[\\/]/).pop();
-  
-  // If it's already a full filename like a JSON report, preserve it
-  if (!t.endsWith(".json")) {
-    t = t.split(/[?#]/)[0];
-  }
+      t = t.split(/[\\/]/).pop();
+      
+      if (!t.endsWith(".json")) {
+        t = t.split(/[?#]/)[0];
+      }
 
-  t = t.replace(/[<>:"|?*\x00-\x1F]/g, "_").trim();
+      t = t.replace(/[<>:"|?*\x00-\x1F]/g, "_").trim();
 
-  return t || "source.txt";
-}
+      return t || "source.txt";
+    }
 
     function updateButtons() {
       document.getElementById("downloadJsBtn").disabled = !jsFile;
@@ -1138,7 +1140,6 @@
           );
           fileCount++;
 
-          // Export embedded sources from standard and indexed maps.
           const flattenedSources = flattenSourceMap(mapObj);
 
           for (let s = 0; s < flattenedSources.length; s++) {
@@ -1184,76 +1185,74 @@
       }
     });
 
-    /* Save Scan JSON Report Handler */
-document.getElementById("saveReportBtn").addEventListener("click", () => {
-  if (!scanState.results.length) {
-    setStatus("No scanned results to save.");
-    return;
-  }
+    document.getElementById("saveReportBtn").addEventListener("click", () => {
+      if (!scanState.results.length) {
+        setStatus("No scanned results to save.");
+        return;
+      }
 
-  const totalJsFiles = scanState.results.length;
-  const mapComments = scanState.results.filter(x => x.commentMatch).length;
-  const validMaps = scanState.results.filter(x => x.commentValid || x.guessValid).length;
-  const fetchFailures = scanState.results.filter(x => x.error && !x.commentMatch).length;
+      const totalJsFiles = scanState.results.length;
+      const mapComments = scanState.results.filter(x => x.commentMatch).length;
+      const validMaps = scanState.results.filter(x => x.commentValid || x.guessValid).length;
+      const fetchFailures = scanState.results.filter(x => x.error && !x.commentMatch).length;
 
-  const resultsList = scanState.results.map(item => {
-    let source = "none";
-    let validLink = null;
+      const resultsList = scanState.results.map(item => {
+        let source = "none";
+        let validLink = null;
 
-    if (item.commentValid) {
-      source = "comment";
-      validLink = item.commentMatch ? item.commentMatch.url : null;
-    } else if (item.guessValid) {
-      source = "guessed";
-      validLink = item.guessUrl;
-    }
+        if (item.commentValid) {
+          source = "comment";
+          validLink = item.commentMatch ? item.commentMatch.url : null;
+        } else if (item.guessValid) {
+          source = "guessed";
+          validLink = item.guessUrl;
+        }
 
-    return {
-      jsUrl: item.jsUrl,
-      hasValidMap: item.commentValid || item.guessValid,
-      source: source,
-      validLink: validLink,
-      guessedUrl: item.guessUrl,
-      commentMapUrl: item.commentMatch ? item.commentMatch.url : null,
-      error: item.error || null
-    };
-  });
+        return {
+          jsUrl: item.jsUrl,
+          hasValidMap: item.commentValid || item.guessValid,
+          source: source,
+          validLink: validLink,
+          guessedUrl: item.guessUrl,
+          commentMapUrl: item.commentMatch ? item.commentMatch.url : null,
+          error: item.error || null
+        };
+      });
 
-  const rawUrl = document.getElementById("scanUrl").value.trim();
-  const unixTimestamp = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
-  
-  // Format the URL into a clean filename-friendly string
-  let urlPart = "scanned-site";
-  try {
-    const parsed = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : "https://" + rawUrl);
-    urlPart = (parsed.hostname + parsed.pathname)
-      .replace(/[^a-zA-Z0-9]/g, "_")
-      .replace(/^_+|_+$/g, "")
-      .replace(/_+/g, "_");
-  } catch (_) {}
+      const rawUrl = document.getElementById("scanUrl").value.trim();
+      const unixTimestamp = Math.floor(Date.now() / 1000);
+      
+      let urlPart = "scanned-site";
+      try {
+        const parsed = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : "https://" + rawUrl);
+        urlPart = (parsed.hostname + parsed.pathname)
+          .replace(/[^a-zA-Z0-9]/g, "_")
+          .replace(/^_+|_+$/g, "")
+          .replace(/_+/g, "_");
+      } catch (_) {}
 
-  const reportFileName = `${urlPart}_${unixTimestamp}.json`;
+      const reportFileName = `${urlPart}_${unixTimestamp}.json`;
 
-  const reportData = {
-    scanDate: new Date().toISOString(),
-    unixTimestamp: unixTimestamp,
-    scannedUrl: rawUrl,
-    summary: {
-      jsFiles: totalJsFiles,
-      mapComments: mapComments,
-      validMaps: validMaps,
-      fetchFailures: fetchFailures
-    },
-    results: resultsList
-  };
+      const reportData = {
+        scanDate: new Date().toISOString(),
+        unixTimestamp: unixTimestamp,
+        scannedUrl: rawUrl,
+        summary: {
+          jsFiles: totalJsFiles,
+          mapComments: mapComments,
+          validMaps: validMaps,
+          fetchFailures: fetchFailures
+        },
+        results: resultsList
+      };
 
-  const jsonBlob = new Blob([JSON.stringify(reportData, null, 2)], {
-    type: "application/json;charset=utf-8"
-  });
+      const jsonBlob = new Blob([JSON.stringify(reportData, null, 2)], {
+        type: "application/json;charset=utf-8"
+      });
 
-  downloadBlob(jsonBlob, reportFileName);
-  setStatus(`Saved scan report as ${reportFileName}`);
-});
+      downloadBlob(jsonBlob, reportFileName);
+      setStatus(`Saved scan report as ${reportFileName}`);
+    });
 
     document.getElementById("zipBtn").addEventListener("click", async () => {
       if (sources.length) {
@@ -1415,7 +1414,11 @@ document.getElementById("saveReportBtn").addEventListener("click", () => {
       box.innerHTML = "";
 
       if (!scanState.results.length) {
-        box.innerHTML = '<div class="scan-empty">No JavaScript files were found.</div>';
+        box.innerHTML = `
+          <div class="scan-empty">
+            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
+          </div>`;
+        attachReportFileInput();
         return;
       }
 
@@ -1627,14 +1630,6 @@ document.getElementById("saveReportBtn").addEventListener("click", () => {
       try {
         const sameOrigin = $("sameOriginOnly").checked;
 
-        /*
-         * Normal scan:
-         *   Fetch the HTML and discover <script src="..."> tags.
-         *
-         * Deep browser scan:
-         *   Ask the Vercel /api/discover endpoint to launch a real
-         *   browser and capture scripts loaded by JavaScript too.
-         */
         let pageHtml = "";
         let scriptUrls = [];
 
@@ -1642,11 +1637,6 @@ document.getElementById("saveReportBtn").addEventListener("click", () => {
           ? "Starting deep browser scan... This can take a little longer."
           : "Fetching page HTML...";
 
-        /*
-         * We still fetch the HTML in both modes because it lets us
-         * inspect inline scripts and gives us the normal static
-         * script list as a fallback.
-         */
         pageHtml = await fetchText(pageUrl.href);
 
         const staticScriptUrls =
@@ -1710,20 +1700,6 @@ document.getElementById("saveReportBtn").addEventListener("click", () => {
           }
         }
 
-        /*
-         * Deduplicate and filter JavaScript URLs.
-         *
-         * Do NOT require the URL to end in ".js". Runtime discovery
-         * can find JavaScript such as:
-         *
-         *   /gtm.js?id=123
-         *
-         * or other script endpoints whose path doesn't end in .js.
-         *
-         * The browser endpoint has already identified these as
-         * JavaScript resources. Static HTML discovery still uses
-         * the URL pattern.
-         */
         let urls = [...new Set(
           scriptUrls.filter(url =>
             /^https?:\/\//i.test(url)
@@ -1746,9 +1722,6 @@ document.getElementById("saveReportBtn").addEventListener("click", () => {
           });
         }
 
-        /*
-         * Inline scripts are only available from the HTML response.
-         */
         if ($("scanInline").checked) {
           const doc =
             new DOMParser().parseFromString(pageHtml, "text/html");
@@ -1841,11 +1814,6 @@ document.getElementById("saveReportBtn").addEventListener("click", () => {
         $("scanProgressText").textContent =
           `Found ${urls.length} unique JavaScript file(s). Checking maps...`;
 
-        /*
-         * Scan several files at once so normal scans stay quick.
-         * Deep browser discovery itself happens before this stage;
-         * the checkbox controls the expensive browser phase.
-         */
         const concurrency = 4;
         let next = 0;
 
@@ -1933,6 +1901,60 @@ document.getElementById("saveReportBtn").addEventListener("click", () => {
         $("stopScanBtn").disabled = true;
       }
     }
+
+    function attachReportFileInput() {
+      const input = document.getElementById("reportFileInput");
+      if (!input) return;
+
+      input.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+          setStatus("Loading scan report JSON...");
+          const text = await file.text();
+          const data = JSON.parse(text);
+
+          if (!data.results || !Array.isArray(data.results)) {
+            throw new Error("Invalid report format: missing 'results' array.");
+          }
+
+          if (data.scannedUrl) {
+            document.getElementById("scanUrl").value = data.scannedUrl;
+          }
+
+          scanState.results = data.results.map(item => ({
+            jsUrl: item.jsUrl,
+            guessUrl: item.guessedUrl || item.jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map"),
+            commentMatch: item.commentMapUrl ? { url: item.commentMapUrl, raw: item.commentMapUrl, embedded: item.commentMapUrl.startsWith("data:") } : null,
+            commentValid: item.source === "comment",
+            guessValid: item.source === "guessed",
+            mapSources: null,
+            mapData: null,
+            error: item.error || ""
+          }));
+
+          renderScanResults();
+          updateButtons();
+
+          const summary = data.summary || {
+            jsFiles: scanState.results.length,
+            mapComments: scanState.results.filter(x => x.commentMatch).length,
+            validMaps: scanState.results.filter(x => x.commentValid || x.guessValid).length,
+            fetchFailures: scanState.results.filter(x => x.error && !x.commentMatch).length
+          };
+
+          updateScanSummary(summary.jsFiles, summary.mapComments, summary.validMaps, summary.fetchFailures);
+          setStatus(`Successfully loaded report from ${file.name}`);
+
+        } catch (err) {
+          console.error(err);
+          setStatus("Failed to load report: " + err.message);
+        }
+      });
+    }
+
+    attachReportFileInput();
 
     $("scanBtn").addEventListener("click", runSiteScan);
 
