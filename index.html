@@ -186,7 +186,7 @@
       background: var(--secondary-hover)
     }
 
-    /* Distinct Warning / Orange styling for Download All */
+    /* Distinct Warning / Orange styling for Buttons */
     button.warning {
       background: #d97706;
     }
@@ -437,6 +437,36 @@
       cursor: pointer;
     }
 
+    .deep-scan-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+
+    .scan-timer {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 7px;
+      border: 1px solid #334155;
+      border-radius: 999px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #94a3b8;
+      background: #0f172a;
+    }
+
+    .deep-scan-option small {
+      color: #6b7280;
+      font-size: 10px;
+      margin-left: 2px;
+    }
+
+    .deep-scan-option input:checked + span {
+      color: #93c5fd;
+      font-weight: 600;
+    }
+
     .scan-progress {
       margin-top: 14px;
       padding: 9px 12px;
@@ -473,17 +503,15 @@
       font-size: 11px;
     }
 
-    /* Fixed height + forced scrollbar so site size never increases */
-    /* Dynamic height: starts small, grows with content up to 480px max, then scrolls */
-.map-results {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 480px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
+    .map-results {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
 
     .scan-empty {
       padding: 25px;
@@ -622,11 +650,17 @@
         <input id="scanUrl" class="scan-url" type="url" placeholder="https://example.com/" autocomplete="off">
         <button id="scanBtn">Scan Site</button>
         <button id="stopScanBtn" class="secondary" disabled>Stop</button>
+        <button id="saveReportBtn" class="warning" disabled>Save Report</button>
       </div>
 
       <div class="scan-options">
         <label><input id="sameOriginOnly" type="checkbox"> Same-origin JS only</label>
         <label><input id="scanInline" type="checkbox" checked> Scan inline scripts</label>
+        <label class="deep-scan-option">
+          <input id="deepBrowserScan" type="checkbox">
+          <span>🌐 Deep browser scan</span>
+          <small>Loads the page in a real browser to discover dynamically loaded JS. Slower.</small>
+        </label>
       </div>
 
       <div id="scanProgress" class="scan-progress">
@@ -658,7 +692,6 @@
       <button id="downloadMapBtn" disabled class="secondary">Download .map</button>
       
       <div class="zip-export-group">
-        
         <input id="zipNameInput" class="zip-input" disabled placeholder="Name?">
         <button id="zipBtn" disabled>Download Custom ZIP</button>
         <button id="downloadAllZipBtn" class="warning" disabled>Download All to ZIP</button>
@@ -726,42 +759,115 @@
       document.getElementById("downloadCurrentBtn").disabled = false;
     }
 
+    /*
+     * Supports both standard Source Maps and indexed Source Maps.
+     *
+     * Standard:
+     *   { sources: [...], sourcesContent: [...] }
+     *
+     * Indexed:
+     *   { sections: [{ offset: {...}, map: {...} }, ...] }
+     */
+    function flattenSourceMap(map) {
+      const result = [];
+
+      function addNormalMap(m, sectionIndex = null) {
+        if (!m || !Array.isArray(m.sources)) return;
+
+        const contents = Array.isArray(m.sourcesContent)
+          ? m.sourcesContent
+          : [];
+
+        for (let i = 0; i < m.sources.length; i++) {
+          result.push({
+            name: m.sources[i] || `source-${result.length + 1}.txt`,
+            content:
+              contents[i] !== undefined && contents[i] !== null
+                ? contents[i]
+                : null,
+            section: sectionIndex
+          });
+        }
+      }
+
+      // Standard Source Map
+      if (Array.isArray(map?.sources)) {
+        addNormalMap(map);
+      }
+
+      // Indexed Source Map
+      if (Array.isArray(map?.sections)) {
+        for (let i = 0; i < map.sections.length; i++) {
+          const section = map.sections[i];
+
+          if (!section?.map) continue;
+
+          // Also handle nested indexed maps.
+          if (Array.isArray(section.map.sections)) {
+            const nested = flattenSourceMap(section.map);
+            nested.forEach(item => {
+              result.push({
+                ...item,
+                section: i
+              });
+            });
+          } else {
+            addNormalMap(section.map, i);
+          }
+        }
+      }
+
+      return result;
+    }
+
+    function getMapSourceCount(map) {
+      return flattenSourceMap(map).length;
+    }
+
     function parseAndLoadMapData(jsonObj, mapName = "scanned.map") {
       mapData = jsonObj;
-      if (!mapData.sources) {
-        throw new Error("This does not appear to be a valid source map.");
+
+      const isStandardMap = Array.isArray(mapData?.sources);
+      const isIndexedMap = Array.isArray(mapData?.sections);
+
+      if (!isStandardMap && !isIndexedMap) {
+        throw new Error("This does not appear to be a valid Source Map.");
       }
-      sources = [];
-      for (let t = 0; t < mapData.sources.length; t++) {
-        let n = mapData.sources[t];
-        let e = null;
-        if (Array.isArray(mapData.sourcesContent) && mapData.sourcesContent[t] !== null && mapData.sourcesContent[t] !== undefined) {
-          e = mapData.sourcesContent[t];
-        }
-        sources.push({
-          name: n,
-          content: e
-        });
-      }
+
+      sources = flattenSourceMap(mapData);
+
       renderFileList();
-      
+
       if (sources.length > 0) {
         const firstValidIndex = sources.findIndex(s => s.content !== null);
         showSource(firstValidIndex >= 0 ? firstValidIndex : 0);
-        const firstItem = document.querySelectorAll(".file-item")[firstValidIndex >= 0 ? firstValidIndex : 0];
+
+        const firstItem =
+          document.querySelectorAll(".file-item")[
+            firstValidIndex >= 0 ? firstValidIndex : 0
+          ];
+
         if (firstItem) firstItem.classList.add("active");
       }
 
-      const t = sources.filter(e => null !== e.content).length;
-      setStatus(`Loaded ${sources.length} mapped sources from ${mapName}. ${t} contain embedded source code.`);
+      const embeddedCount =
+        sources.filter(e => e.content !== null).length;
+
+      const mapType =
+        isIndexedMap && !isStandardMap ? "indexed" : "standard";
+
+      setStatus(
+        `Loaded ${sources.length} mapped sources from ${mapName} ` +
+        `(${mapType} map). ${embeddedCount} contain embedded source code.`
+      );
+
       updateButtons();
 
-      document.getElementById("viewerSection").scrollIntoView({ behavior: 'smooth' });
+      document.getElementById("viewerSection").scrollIntoView({
+        behavior: "smooth"
+      });
     }
 
-    /* Robust browser download helper.
-       Keeps the existing UI/CSS unchanged and handles filenames that contain
-       paths, query strings, or characters that browsers reject for downloads. */
     function downloadBlob(blob, filename) {
       if (!blob) return;
 
@@ -775,8 +881,6 @@
 
       document.body.appendChild(a);
 
-      /* click() works in modern browsers; dispatching a real mouse event
-         provides a fallback for browsers that are picky about downloads. */
       try {
         a.click();
       } catch (_) {
@@ -788,42 +892,40 @@
       }
 
       a.remove();
-
-      /* Give the browser enough time to start large ZIP downloads before
-         releasing the object URL. */
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     }
 
     function cleanFilename(e) {
-      if (!e) return "source.txt";
+  if (!e) return "source.txt";
 
-      let t = String(e)
-        .replace(/^webpack:\/\/\/?/, "")
-        .replace(/^webpack:\/\//, "")
-        .replace(/^file:\/\/\/?/, "")
-        .replace(/^\/+/, "")
-        .replace(/\.\.(\/|\\)/g, "");
+  let t = String(e)
+    .replace(/^webpack:\/\/\/?/, "")
+    .replace(/^webpack:\/\//, "")
+    .replace(/^file:\/\/\/?/, "")
+    .replace(/^\/+/, "")
+    .replace(/\.\.(\/|\\)/g, "");
 
-      /* Download attributes need a filename, not a full path. */
-      t = t.split(/[\\/]/).pop();
-      t = t.split(/[?#]/)[0];
+  t = t.split(/[\\/]/).pop();
+  
+  // If it's already a full filename like a JSON report, preserve it
+  if (!t.endsWith(".json")) {
+    t = t.split(/[?#]/)[0];
+  }
 
-      /* Remove Windows-invalid filename characters and control characters. */
-      t = t.replace(/[<>:"|?*\x00-\x1F]/g, "_").trim();
+  t = t.replace(/[<>:"|?*\x00-\x1F]/g, "_").trim();
 
-      return t || "source.txt";
-    }
+  return t || "source.txt";
+}
 
     function updateButtons() {
       document.getElementById("downloadJsBtn").disabled = !jsFile;
       document.getElementById("downloadMapBtn").disabled = !mapFile && !mapData;
 
-      /* Download All is for automatic scan results, so enable it as soon
-         as the scan has produced results. */
       const hasSources = sources.length > 0;
       const hasScanResults = scanState.results.length > 0;
 
       document.getElementById("downloadAllZipBtn").disabled = !hasScanResults;
+      document.getElementById("saveReportBtn").disabled = !hasScanResults;
       document.getElementById("zipBtn").disabled = !hasSources;
       document.getElementById("zipNameInput").disabled = !hasSources;
     }
@@ -881,9 +983,6 @@
       }
     });
 
-    /* Download every result found by the automatic scanner.
-       This is intentionally separate from `sources`, which only contains
-       the source files from the map currently loaded into the viewer. */
     document.getElementById("downloadAllZipBtn").addEventListener("click", async () => {
       if (!scanState.results.length) {
         setStatus("No scanned results to download.");
@@ -927,7 +1026,6 @@
       for (let i = 0; i < scanState.results.length; i++) {
         const item = scanState.results[i];
 
-        /* Inline scripts do not have a separate JS URL to fetch. */
         if (!item.jsUrl || item.jsUrl.includes("#inline-script-")) {
           if (item.commentMatch?.embedded) {
             try {
@@ -952,7 +1050,6 @@
           `Downloading scanned result ${i + 1}/${scanState.results.length}: ${jsName}`
         );
 
-        /* Add the original JavaScript file. */
         try {
           const jsText = await fetchText(item.jsUrl);
           zip.file(uniqueZipName(jsName), jsText);
@@ -961,8 +1058,6 @@
           failedCount++;
         }
 
-        /* Use the exact map object found during scanning. This is the same
-           data that "Load into Viewer" passes to parseAndLoadMapData(). */
         const mapObj = item.mapData || null;
 
         if (mapObj) {
@@ -972,24 +1067,22 @@
           );
           fileCount++;
 
-          /* Export every readable source exactly like the Viewer:
-             mapData.sources[i] + mapData.sourcesContent[i]. */
-          if (Array.isArray(mapObj.sources)) {
-            for (let s = 0; s < mapObj.sources.length; s++) {
-              const content =
-                Array.isArray(mapObj.sourcesContent)
-                  ? mapObj.sourcesContent[s]
-                  : null;
+          // Export embedded sources from standard and indexed maps.
+          const flattenedSources = flattenSourceMap(mapObj);
 
-              if (content === null || content === undefined) continue;
+          for (let s = 0; s < flattenedSources.length; s++) {
+            const source = flattenedSources[s];
 
-              const sourceName = cleanFilename(
-                mapObj.sources[s] || `source-${s + 1}.txt`
-              );
-
-              zip.file(uniqueZipName(sourceName), content);
-              fileCount++;
+            if (source.content === null || source.content === undefined) {
+              continue;
             }
+
+            const sourceName = cleanFilename(
+              source.name || `source-${s + 1}.txt`
+            );
+
+            zip.file(uniqueZipName(sourceName), source.content);
+            fileCount++;
           }
         }
       }
@@ -1020,6 +1113,78 @@
       }
     });
 
+    /* Save Scan JSON Report Handler */
+	/* Save Scan JSON Report Handler */
+document.getElementById("saveReportBtn").addEventListener("click", () => {
+  if (!scanState.results.length) {
+    setStatus("No scanned results to save.");
+    return;
+  }
+
+  const totalJsFiles = scanState.results.length;
+  const mapComments = scanState.results.filter(x => x.commentMatch).length;
+  const validMaps = scanState.results.filter(x => x.commentValid || x.guessValid).length;
+  const fetchFailures = scanState.results.filter(x => x.error && !x.commentMatch).length;
+
+  const resultsList = scanState.results.map(item => {
+    let source = "none";
+    let validLink = null;
+
+    if (item.commentValid) {
+      source = "comment";
+      validLink = item.commentMatch ? item.commentMatch.url : null;
+    } else if (item.guessValid) {
+      source = "guessed";
+      validLink = item.guessUrl;
+    }
+
+    return {
+      jsUrl: item.jsUrl,
+      hasValidMap: item.commentValid || item.guessValid,
+      source: source,
+      validLink: validLink,
+      guessedUrl: item.guessUrl,
+      commentMapUrl: item.commentMatch ? item.commentMatch.url : null,
+      error: item.error || null
+    };
+  });
+
+  const rawUrl = document.getElementById("scanUrl").value.trim();
+  const unixTimestamp = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
+  
+  // Format the URL into a clean filename-friendly string
+  let urlPart = "scanned-site";
+  try {
+    const parsed = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : "https://" + rawUrl);
+    urlPart = (parsed.hostname + parsed.pathname)
+      .replace(/[^a-zA-Z0-9]/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/_+/g, "_");
+  } catch (_) {}
+
+  const reportFileName = `${urlPart}_${unixTimestamp}.json`;
+
+  const reportData = {
+    scanDate: new Date().toISOString(),
+    unixTimestamp: unixTimestamp,
+    scannedUrl: rawUrl,
+    summary: {
+      jsFiles: totalJsFiles,
+      mapComments: mapComments,
+      validMaps: validMaps,
+      fetchFailures: fetchFailures
+    },
+    results: resultsList
+  };
+
+  const jsonBlob = new Blob([JSON.stringify(reportData, null, 2)], {
+    type: "application/json;charset=utf-8"
+  });
+
+  downloadBlob(jsonBlob, reportFileName);
+  setStatus(`Saved scan report as ${reportFileName}`);
+});
+
     document.getElementById("zipBtn").addEventListener("click", async () => {
       if (sources.length) {
         const o = new JSZip;
@@ -1043,7 +1208,6 @@
       }
     });
 
-    /* Automatic site source-map scanner */
     const scanState = {
       running: false,
       stop: false,
@@ -1310,14 +1474,14 @@
             const map = decodeDataMap(result.commentMatch.raw);
             result.commentValid = !!map;
             result.mapData = map || null;
-            result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+            result.mapSources = getMapSourceCount(map);
           } else {
             try {
               const mapText = await fetchText(result.commentMatch.url);
               const map = JSON.parse(mapText);
-              result.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+              result.commentValid = !!map && (map.version === 3 && (Array.isArray(map.sources) || Array.isArray(map.sections)));
               result.mapData = result.commentValid ? map : null;
-              result.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
+              result.mapSources = getMapSourceCount(map);
             } catch (_) {
               result.commentValid = false;
             }
@@ -1327,12 +1491,12 @@
         try {
           const mapText = await fetchText(result.guessUrl);
           const map = JSON.parse(mapText);
-          result.guessValid = !!map && (map.version === 3 || Array.isArray(map.sources));
+          result.guessValid = !!map && (map.version === 3 && (Array.isArray(map.sources) || Array.isArray(map.sections)));
           if (result.guessValid) {
             result.mapData = map;
           }
           if (result.guessValid && result.mapSources == null) {
-            result.mapSources = Array.isArray(map.sources) ? map.sources.length : null;
+            result.mapSources = getMapSourceCount(map);
           }
         } catch (_) {}
 
@@ -1347,6 +1511,26 @@
     }
 
     async function runSiteScan() {
+      const scanTimerEl = $("scanTimer");
+      const scanStartedAt = performance.now();
+      let scanTimerInterval = null;
+
+      const updateScanTimer = () => {
+        const elapsed = Math.max(
+          0,
+          Math.floor((performance.now() - scanStartedAt) / 1000)
+        );
+        const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
+        const seconds = String(elapsed % 60).padStart(2, "0");
+        if (scanTimerEl) {
+          scanTimerEl.textContent = `${minutes}:${seconds}`;
+          scanTimerEl.hidden = false;
+        }
+      };
+
+      updateScanTimer();
+      scanTimerInterval = setInterval(updateScanTimer, 250);
+
       if (scanState.running) return;
 
       let pageUrl;
@@ -1357,6 +1541,8 @@
         return;
       }
 
+      const deepBrowserScan = $("deepBrowserScan").checked;
+
       scanState.running = true;
       scanState.stop = false;
       scanState.results = [];
@@ -1364,18 +1550,121 @@
       $("scanBtn").disabled = true;
       $("stopScanBtn").disabled = false;
       $("scanSummary").hidden = true;
-      $("mapResults").innerHTML = '<div class="scan-empty">Starting scan...</div>';
+
+      $("mapResults").innerHTML =
+        '<div class="scan-empty">Starting scan...</div>';
 
       try {
-        $("scanProgressText").textContent = "Fetching page HTML...";
-        const pageHtml = await fetchText(pageUrl.href);
-
-        const scriptUrls = extractScriptUrls(pageHtml, pageUrl.href);
         const sameOrigin = $("sameOriginOnly").checked;
 
-        let urls = [...new Set(scriptUrls)].filter(url =>
-          /\.m?js(?:[?#].*)?$/i.test(url)
-        );
+        /*
+         * Normal scan:
+         *   Fetch the HTML and discover <script src="..."> tags.
+         *
+         * Deep browser scan:
+         *   Ask the Vercel /api/discover endpoint to launch a real
+         *   browser and capture scripts loaded by JavaScript too.
+         */
+        let pageHtml = "";
+        let scriptUrls = [];
+
+        $("scanProgressText").textContent = deepBrowserScan
+          ? "Starting deep browser scan... This can take a little longer."
+          : "Fetching page HTML...";
+
+        /*
+         * We still fetch the HTML in both modes because it lets us
+         * inspect inline scripts and gives us the normal static
+         * script list as a fallback.
+         */
+        pageHtml = await fetchText(pageUrl.href);
+
+        const staticScriptUrls =
+          extractScriptUrls(pageHtml, pageUrl.href);
+
+        scriptUrls.push(...staticScriptUrls);
+
+        if (deepBrowserScan) {
+          const PROXY_BASE =
+            "https://cors-proxy2-nu.vercel.app";
+
+          const discoverUrl =
+            `${PROXY_BASE}/api/discover?url=` +
+            encodeURIComponent(pageUrl.href);
+
+          $("scanProgressText").textContent =
+            "Deep browser scan: loading page and capturing runtime JavaScript...";
+
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 70000);
+
+          try {
+            const response = await fetch(discoverUrl, {
+              method: "GET",
+              cache: "no-store",
+              signal: controller.signal
+            });
+
+            let data;
+
+            try {
+              data = await response.json();
+            } catch (_) {
+              throw new Error(
+                `Browser discovery returned HTTP ${response.status} with an invalid response.`
+              );
+            }
+
+            if (!response.ok || !data.ok) {
+              throw new Error(
+                data?.message ||
+                data?.error ||
+                `Browser discovery failed with HTTP ${response.status}.`
+              );
+            }
+
+            const runtimeUrls = Array.isArray(data.jsFiles)
+              ? data.jsFiles
+                  .map(file =>
+                    typeof file === "string" ? file : file?.url
+                  )
+                  .filter(Boolean)
+              : [];
+
+            scriptUrls.push(...runtimeUrls);
+
+            $("scanProgressText").textContent =
+              `Deep browser scan found ${runtimeUrls.length} runtime JavaScript request(s). Combining with static scripts...`;
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+
+        /*
+         * Deduplicate and filter JavaScript URLs.
+         *
+         * Do NOT require the URL to end in ".js". Runtime discovery
+         * can find JavaScript such as:
+         *
+         *   /gtm.js?id=123
+         *
+         * or other script endpoints whose path doesn't end in .js.
+         *
+         * The browser endpoint has already identified these as
+         * JavaScript resources. Static HTML discovery still uses
+         * the URL pattern.
+         */
+        let urls = [...new Set(
+          scriptUrls.filter(url =>
+            /^https?:\/\//i.test(url)
+          )
+        )];
+
+        if (!deepBrowserScan) {
+          urls = urls.filter(url =>
+            /\.m?js(?:[?#].*)?$/i.test(url)
+          );
+        }
 
         if (sameOrigin) {
           urls = urls.filter(url => {
@@ -1387,42 +1676,91 @@
           });
         }
 
+        /*
+         * Inline scripts are only available from the HTML response.
+         */
         if ($("scanInline").checked) {
-          const doc = new DOMParser().parseFromString(pageHtml, "text/html");
-          const inline = [...doc.querySelectorAll("script:not([src])")]
+          const doc =
+            new DOMParser().parseFromString(pageHtml, "text/html");
+
+          const inline = [
+            ...doc.querySelectorAll("script:not([src])")
+          ]
             .map((s, i) => ({
-              url: pageUrl.href + "#inline-script-" + (i + 1),
+              url:
+                pageUrl.href +
+                "#inline-script-" +
+                (i + 1),
               text: s.textContent || ""
             }))
-            .filter(x => /sourceMappingURL\s*=/.test(x.text));
+            .filter(x =>
+              /sourceMappingURL\s*=/.test(x.text)
+            );
 
           for (const x of inline) {
-            const comments = sourceMapFromComment(x.text, pageUrl.href);
+            if (scanState.stop) break;
+
+            const comments =
+              sourceMapFromComment(x.text, pageUrl.href);
+
             scanState.results.push({
               jsUrl: x.url,
               guessUrl: "n/a (inline script)",
-              commentMatch: comments[comments.length - 1] || null,
+              commentMatch:
+                comments[comments.length - 1] || null,
               commentValid: false,
               guessValid: false,
               mapSources: null,
+              mapData: null,
               error: "Inline script: source-map comment found."
             });
 
-            const last = scanState.results[scanState.results.length - 1];
+            const last =
+              scanState.results[
+                scanState.results.length - 1
+              ];
+
             if (last.commentMatch?.embedded) {
-              const map = decodeDataMap(last.commentMatch.raw);
+              const map =
+                decodeDataMap(last.commentMatch.raw);
+
               last.commentValid = !!map;
-              last.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
-              last.error = last.commentValid ? "" : "Invalid embedded source map.";
+              last.mapData = map || null;
+              last.mapSources =
+                getMapSourceCount(map);
+              last.error = last.commentValid
+                ? ""
+                : "Invalid embedded source map.";
             } else if (last.commentMatch?.url) {
               try {
-                const mapText = await fetchText(last.commentMatch.url);
+                const mapText =
+                  await fetchText(last.commentMatch.url);
+
                 const map = JSON.parse(mapText);
-                last.commentValid = !!map && (map.version === 3 || Array.isArray(map.sources));
-                last.mapSources = Array.isArray(map?.sources) ? map.sources.length : null;
-                last.error = last.commentValid ? "" : "Referenced file is not a valid source map.";
+
+                last.commentValid =
+                  !!map &&
+                  map.version === 3 &&
+                  (
+                    Array.isArray(map.sources) ||
+                    Array.isArray(map.sections)
+                  );
+
+                last.mapData =
+                  last.commentValid ? map : null;
+
+                last.mapSources =
+                  last.commentValid
+                    ? getMapSourceCount(map)
+                    : null;
+
+                last.error =
+                  last.commentValid
+                    ? ""
+                    : "Referenced file is not a valid source map.";
               } catch (e) {
-                last.error = "Could not fetch referenced inline-script map.";
+                last.error =
+                  "Could not fetch referenced inline-script map.";
               }
             }
           }
@@ -1431,48 +1769,95 @@
         updateButtons();
 
         $("scanProgressText").textContent =
-          `Found ${urls.length} external JavaScript file(s). Checking maps...`;
+          `Found ${urls.length} unique JavaScript file(s). Checking maps...`;
 
+        /*
+         * Scan several files at once so normal scans stay quick.
+         * Deep browser discovery itself happens before this stage;
+         * the checkbox controls the expensive browser phase.
+         */
         const concurrency = 4;
         let next = 0;
 
         async function worker() {
           while (!scanState.stop) {
             const index = next++;
+
             if (index >= urls.length) return;
 
             const jsUrl = urls[index];
+
             $("scanProgressText").textContent =
               `Checking ${index + 1}/${urls.length}: ${jsUrl}`;
 
-            const result = await scanOneJs(jsUrl, pageUrl.href);
+            const result =
+              await scanOneJs(jsUrl, pageUrl.href);
+
             scanState.results.push(result);
+
             renderScanResults();
             updateButtons();
 
-            const total = scanState.results.length;
-            const comments = scanState.results.filter(x => x.commentMatch).length;
-            const validMaps = scanState.results.filter(x => x.commentValid || x.guessValid).length;
-            const failures = scanState.results.filter(x => x.error && !x.commentMatch).length;
-            updateScanSummary(total, comments, validMaps, failures);
+            const total =
+              scanState.results.length;
+
+            const comments =
+              scanState.results.filter(
+                x => x.commentMatch
+              ).length;
+
+            const validMaps =
+              scanState.results.filter(
+                x => x.commentValid || x.guessValid
+              ).length;
+
+            const failures =
+              scanState.results.filter(
+                x => x.error && !x.commentMatch
+              ).length;
+
+            updateScanSummary(
+              total,
+              comments,
+              validMaps,
+              failures
+            );
           }
         }
 
-        await Promise.all(Array.from(
-          { length: Math.min(concurrency, urls.length || 1) },
-          worker
-        ));
+        await Promise.all(
+          Array.from(
+            {
+              length:
+                Math.min(
+                  concurrency,
+                  urls.length || 1
+                )
+            },
+            worker
+          )
+        );
 
         if (scanState.stop) {
-          $("scanProgressText").textContent = "Scan stopped.";
+          $("scanProgressText").textContent =
+            "Scan stopped.";
         } else {
           $("scanProgressText").textContent =
-            `Finished. Checked ${urls.length} external JavaScript file(s).`;
+            `Finished. Checked ${urls.length} unique JavaScript file(s)` +
+            (deepBrowserScan
+              ? " using deep browser discovery."
+              : ".");
         }
       } catch (e) {
+        console.error(e);
+
         $("scanProgressText").textContent =
           `Scan failed: ${e.message || e}.`;
       } finally {
+        if (scanTimerInterval) {
+          clearInterval(scanTimerInterval);
+        }
+
         scanState.running = false;
         $("scanBtn").disabled = false;
         $("stopScanBtn").disabled = true;
