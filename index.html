@@ -576,8 +576,8 @@
       border-radius: 7px;
     }
 
-    /* Link-styled upload report trigger */
-    .upload-link {
+    /* Link-styled upload report trigger & clear trigger */
+    .upload-link, .clear-link {
       color: var(--accent-blue);
       text-decoration: underline;
       cursor: pointer;
@@ -585,8 +585,13 @@
       transition: color 0.15s ease;
     }
 
-    .upload-link:hover {
+    .upload-link:hover, .clear-link:hover {
       color: #93c5fd;
+    }
+
+    .clear-results-container {
+      margin-top: 12px;
+      text-align: right;
     }
 
     .map-result {
@@ -752,6 +757,11 @@
       </div>
 
       <div class="scan-summary" id="scanSummary" hidden></div>
+      
+      <div id="clearContainer" class="clear-results-container" hidden>
+        <span id="clearResultsBtn" class="clear-link">Clear Results</span>
+      </div>
+
       <div class="map-results" id="mapResults">
         <div class="scan-empty">
           <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
@@ -1409,11 +1419,21 @@
       }
     }
 
+    function clearResults() {
+      scanState.results = [];
+      $("scanSummary").hidden = true;
+      $("clearContainer").hidden = true;
+      renderScanResults();
+      updateButtons();
+      setStatus("Scan results cleared.");
+    }
+
     function renderScanResults() {
       const box = $("mapResults");
       box.innerHTML = "";
 
       if (!scanState.results.length) {
+        $("clearContainer").hidden = true;
         box.innerHTML = `
           <div class="scan-empty">
             <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
@@ -1421,6 +1441,8 @@
         attachReportFileInput();
         return;
       }
+
+      $("clearContainer").hidden = false;
 
       const sorted = [...scanState.results].sort((a, b) => {
         const score = x =>
@@ -1623,6 +1645,7 @@
       $("scanBtn").disabled = true;
       $("stopScanBtn").disabled = false;
       $("scanSummary").hidden = true;
+      $("clearContainer").hidden = true;
 
       $("mapResults").innerHTML =
         '<div class="scan-empty">Starting scan...</div>';
@@ -1966,6 +1989,8 @@
     $("scanUrl").addEventListener("keydown", e => {
       if (e.key === "Enter") runSiteScan();
     });
+
+    $("clearResultsBtn").addEventListener("click", clearResults);
   </script>
 </body>
 </html>
