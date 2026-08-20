@@ -1420,13 +1420,21 @@
     }
 
     function clearResults() {
-      scanState.results = [];
-      $("scanSummary").hidden = true;
-      $("clearContainer").hidden = true;
-      renderScanResults();
-      updateButtons();
-      setStatus("Scan results cleared.");
-    }
+  scanState.results = [];
+  
+  // Hide and reset summary stats block
+  const summaryBox = $("scanSummary");
+  summaryBox.hidden = true;
+  summaryBox.innerHTML = "";
+  
+  // Reset progress text and container
+  $("scanProgressText").textContent = "Ready to scan.";
+  $("clearContainer").hidden = true;
+  
+  renderScanResults();
+  updateButtons();
+  setStatus("Scan results cleared.");
+}
 
     function renderScanResults() {
       const box = $("mapResults");
