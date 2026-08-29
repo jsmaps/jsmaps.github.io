@@ -424,7 +424,6 @@
       transition: transform 0.3s ease;
     }
 
-    /* Collapsible Grid Animation Strategy */
     .auto-scan-body-wrapper {
       display: grid;
       grid-template-rows: 1fr;
@@ -500,7 +499,7 @@
       border-color: #374151;
     }
 
-    .scan-option-card:has(input:checked) {
+    .scan-option-card:has(input[type="checkbox"]:checked) {
       background: rgba(37, 99, 235, 0.08);
       border-color: rgba(96, 165, 250, 0.4);
     }
@@ -547,7 +546,7 @@
       color: var(--text-main);
     }
 
-    .scan-option-card:has(input:checked) .option-title {
+    .scan-option-card:has(input[type="checkbox"]:checked) .option-title {
       color: #93c5fd;
     }
 
@@ -745,7 +744,6 @@
   </header>
   <div class="container">
 
-    <!-- Section set to 'collapsed' by default -->
     <section id="autoScanSection" class="auto-scan collapsed">
       <div class="auto-scan-head">
         <div>
@@ -791,6 +789,18 @@
                 <span class="option-desc">Loads the page in a real browser to discover dynamically loaded JS. Slower.</span>
               </div>
             </label>
+
+            <!-- Regex URL Rewriter -->
+            <div class="scan-option-card" style="flex: 1 1 100%; cursor: default;">
+              <div class="option-content" style="width: 100%;">
+                <span class="option-title">URL Rewrite (Regex)</span>
+                <span class="option-desc">Rewrite discovered JS & .map URLs before requesting them (e.g. bypass CDN subdomains).</span>
+                <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                  <input id="regexPattern" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Match Pattern">
+                  <input id="regexReplacement" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Replacement (e.g. $1)">
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="scanProgress" class="scan-progress">
@@ -1058,6 +1068,22 @@
 
     function setStatus(e) {
       document.getElementById("status").textContent = e;
+    }
+
+    function applyUrlRewrite(url) {
+      if (!url) return url;
+      const pattern = $("regexPattern")?.value.trim();
+      const replacement = $("regexReplacement")?.value || "";
+
+      if (!pattern) return url;
+
+      try {
+        const re = new RegExp(pattern, "g");
+        return url.replace(re, replacement);
+      } catch (err) {
+        console.warn("Invalid rewrite regex:", err);
+        return url;
+      }
     }
 
     document.getElementById("jsFile").addEventListener("change", e => {
@@ -1595,10 +1621,13 @@
       `;
     }
 
-    async function scanOneJs(jsUrl, pageUrl) {
+    async function scanOneJs(rawJsUrl, pageUrl) {
+      const jsUrl = applyUrlRewrite(rawJsUrl);
+      const guessUrl = applyUrlRewrite(jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map"));
+
       const result = {
         jsUrl,
-        guessUrl: jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map"),
+        guessUrl,
         commentMatch: null,
         commentValid: false,
         guessValid: false,
@@ -1620,6 +1649,7 @@
             result.mapData = map || null;
             result.mapSources = getMapSourceCount(map);
           } else {
+            result.commentMatch.url = applyUrlRewrite(result.commentMatch.url);
             try {
               const mapText = await fetchText(result.commentMatch.url);
               const map = JSON.parse(mapText);
@@ -1828,8 +1858,10 @@
                 : "Invalid embedded source map.";
             } else if (last.commentMatch?.url) {
               try {
+                const commentMapUrl = applyUrlRewrite(last.commentMatch.url);
+                last.commentMatch.url = commentMapUrl;
                 const mapText =
-                  await fetchText(last.commentMatch.url);
+                  await fetchText(commentMapUrl);
 
                 const map = JSON.parse(mapText);
 
@@ -2017,7 +2049,6 @@
 
     $("clearResultsBtn").addEventListener("click", clearResults);
 
-    // Toggle Collapsible state with animation
     $("toggleScannerBtn").addEventListener("click", () => {
       const section = $("autoScanSection");
       const isCollapsed = section.classList.toggle("collapsed");
