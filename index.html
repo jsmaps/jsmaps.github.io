@@ -1,23 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <title>JS Source Map Viewer & Scanner</title>
+    <link rel="icon" type="image/svg+xml" href="https://jsmaps.github.io/favicon.svg">
+    <title>JS Source Map Viewer &amp; Scanner</title>
 
     <meta name="description" content="JS Source Map Viewer and source map scanner. Find JavaScript source maps, view mapped source data, and download source map results.">
     <meta name="keywords" content="JavaScript source map viewer, source map scanner, JS source maps, JavaScript source maps, source map viewer, source map visualization, source map data">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://jsmaps.github.io/">
 
-    <meta property="og:title" content="JS Source Map Viewer & Scanner">
+    <meta property="og:title" content="JS Source Map Viewer &amp; Scanner">
     <meta property="og:description" content="Find, inspect, and download JavaScript source maps and their mapped source files.">
     <meta property="og:url" content="https://jsmaps.github.io/">
     <meta property="og:type" content="website">
 
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="JS Source Map Viewer & Scanner">
+    <meta name="twitter:title" content="JS Source Map Viewer &amp; Scanner">
     <meta name="twitter:description" content="Find, inspect, and download JavaScript source maps and mapped source files.">
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -744,7 +745,7 @@
   </header>
   <div class="container">
 
-    <section id="autoScanSection" class="auto-scan collapsed">
+    <section id="autoScanSection" class="auto-scan">
       <div class="auto-scan-head">
         <div>
           <h2>🔎 Automatic Source Map Scanner</h2>
@@ -752,7 +753,7 @@
         </div>
         <button id="toggleScannerBtn" class="toggle-scanner-btn">
           <span class="toggle-icon">▼</span>
-          <span id="toggleScannerText">Expand</span>
+          <span id="toggleScannerText">Collapse</span>
         </button>
       </div>
 
@@ -761,8 +762,8 @@
           <div class="scan-controls">
             <input id="scanUrl" class="scan-url" type="url" placeholder="https://example.com/" autocomplete="off">
             <button id="scanBtn">Scan Site</button>
-            <button id="stopScanBtn" class="secondary" disabled>Stop</button>
-            <button id="saveReportBtn" class="warning" disabled>Save Report</button>
+            <button id="stopScanBtn" class="secondary" disabled="">Stop</button>
+            <button id="saveReportBtn" class="warning" disabled="">Save Report</button>
           </div>
 
           <div class="scan-options">
@@ -775,7 +776,7 @@
             </label>
 
             <label class="scan-option-card">
-              <input id="scanInline" type="checkbox" checked>
+              <input id="scanInline" type="checkbox" checked="">
               <div class="option-content">
                 <span class="option-title">Scan inline scripts</span>
                 <span class="option-desc">Check embedded <code>&lt;script&gt;</code> blocks inside HTML responses.</span>
@@ -794,7 +795,7 @@
             <div class="scan-option-card" style="flex: 1 1 100%; cursor: default;">
               <div class="option-content" style="width: 100%;">
                 <span class="option-title">URL Rewrite (Regex)</span>
-                <span class="option-desc">Rewrite discovered JS & .map URLs before requesting them (e.g. bypass CDN subdomains).</span>
+                <span class="option-desc">Rewrite discovered JS &amp; .map URLs before requesting them (e.g. bypass CDN subdomains).</span>
                 <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
                   <input id="regexPattern" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Match Pattern">
                   <input id="regexReplacement" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Replacement (e.g. $1)">
@@ -807,17 +808,16 @@
             <span id="scanProgressText">Ready to scan.</span>
           </div>
 
-          <div class="scan-summary" id="scanSummary" hidden></div>
+          <div class="scan-summary" id="scanSummary" hidden=""></div>
           
-          <div id="clearContainer" class="clear-results-container" hidden>
+          <div id="clearContainer" class="clear-results-container" hidden="">
             <span id="clearResultsBtn" class="clear-link">Clear Results</span>
           </div>
 
           <div class="map-results" id="mapResults">
-            <div class="scan-empty">
-              <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
-            </div>
-          </div>
+          <div class="scan-empty">
+            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
+          </div></div>
         </div>
       </div>
     </section>
@@ -837,17 +837,17 @@
 
     <div class="actions">
       <button id="loadBtn">Load Source Map</button>
-      <button id="downloadJsBtn" disabled class="secondary">Download JS</button>
-      <button id="downloadMapBtn" disabled class="secondary">Download .map</button>
+      <button id="downloadJsBtn" disabled="" class="secondary">Download JS</button>
+      <button id="downloadMapBtn" disabled="" class="secondary">Download .map</button>
       
       <div class="zip-export-group">
-        <input id="zipNameInput" class="zip-input" disabled placeholder="Name?">
-        <button id="zipBtn" disabled>Download Custom ZIP</button>
-        <button id="downloadAllZipBtn" class="warning" disabled>Download All to ZIP</button>
+        <input id="zipNameInput" class="zip-input" disabled="" placeholder="Name?">
+        <button id="zipBtn" disabled="">Download Custom ZIP</button>
+        <button id="downloadAllZipBtn" class="warning" disabled="">Download All to ZIP</button>
       </div>
     </div>
 
-    <div class="status" id="status">Select a JS file and a source map, or scan a site to begin.</div>
+    <div class="status" id="status">Scan results cleared.</div>
 
     <div class="layout" id="viewerSection">
       <aside class="sidebar">
@@ -857,7 +857,7 @@
       <main class="viewer">
         <div class="viewer-header">
           <div class="filename" id="currentFile">No file selected</div>
-          <button id="downloadCurrentBtn" disabled>Download Current</button>
+          <button id="downloadCurrentBtn" disabled="">Download Current</button>
         </div>
         <pre id="code"><div class="empty">Select a source from the list to view it.</div></pre>
       </main>
@@ -1289,11 +1289,15 @@
 
         return {
           jsUrl: item.jsUrl,
-          hasValidMap: item.commentValid || item.guessValid,
-          source: source,
+          hasValidMap: item.commentValid || item.guessValid || item.compressedValid,
+          source: item.compressedValid ? "compressed-zlib" : source,
           validLink: validLink,
           guessedUrl: item.guessUrl,
           commentMapUrl: item.commentMatch ? item.commentMatch.url : null,
+            compressedEncoding: item.compressedInfo?.encoding || null,
+            compressedPayload: item.compressedInfo?.encodedPayload || null,
+            decodedPayload: item.compressedInfo?.decodedText || null,
+            decodedUrls: item.decodedUrls || [],
           error: item.error || null
         };
       });
@@ -1460,6 +1464,111 @@
       }
     }
 
+    // Some CDNs/optimizers encode asset lists directly into a URL as
+    // Base64 -> zlib/DEFLATE, commonly beginning with "eJx9".
+    // This is deliberately a fallback after normal source-map checks.
+    function getCompressedUrlPayload(url) {
+      try {
+        const parsed = new URL(url);
+        const match = parsed.search.match(/eJx9[A-Za-z0-9+/_=-]+/);
+        return match ? match[0] : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function looksLikeCompressedPayloadUrl(url) {
+      return !!getCompressedUrlPayload(url);
+    }
+
+    function base64ToBytes(value) {
+      const normalized = value
+        .replace(/-/g, "+")
+        .replace(/_/g, "/")
+        .replace(/[^A-Za-z0-9+/=]/g, "");
+      const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    async function inflateZlibBase64(value) {
+      const bytes = base64ToBytes(value);
+      if (
+        bytes.length < 2 ||
+        bytes[0] !== 0x78 ||
+        ![0x01, 0x5e, 0x9c, 0xda].includes(bytes[1])
+      ) {
+        throw new Error("Not a zlib/DEFLATE payload.");
+      }
+      if (typeof DecompressionStream !== "function") {
+        throw new Error("This browser does not support DecompressionStream.");
+      }
+      const stream = new Blob([bytes]).stream().pipeThrough(
+        new DecompressionStream("deflate")
+      );
+      const buffer = await new Response(stream).arrayBuffer();
+      return new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+    }
+
+    function isValidSourceMapObject(map) {
+      return !!map && map.version === 3 &&
+        (Array.isArray(map.sources) || Array.isArray(map.sections));
+    }
+
+    function extractUrlsFromDecodedPayload(payload, baseUrl) {
+      const urls = new Set();
+      const add = value => {
+        if (typeof value !== "string") return;
+        const cleaned = value.trim()
+          .replace(/^['"]|['"]$/g, "")
+          .replace(/[;,]+$/g, "");
+        if (!cleaned) return;
+        const absolute = absoluteUrl(cleaned, baseUrl);
+        if (absolute && (/^https?:/i.test(cleaned) || cleaned.startsWith("/"))) {
+          urls.add(absolute);
+        }
+      };
+
+      try {
+        const parsed = JSON.parse(payload);
+        if (isValidSourceMapObject(parsed)) return [];
+        if (Array.isArray(parsed)) parsed.forEach(add);
+        else if (typeof parsed === "string") add(parsed);
+        else if (parsed && typeof parsed === "object") {
+          Object.values(parsed).forEach(value => {
+            if (Array.isArray(value)) value.forEach(add);
+            else add(value);
+          });
+        }
+      } catch (_) {}
+
+      const matches = payload.match(
+        /https?:\/\/[^\s,;'"<>]+|\/(?:[^\s,;'"<>]+\.m?js(?:[?#][^\s,;'"<>]*)?)/gi
+      ) || [];
+      matches.forEach(add);
+      return [...urls];
+    }
+
+    async function decodeCompressedUrl(url, pageUrl) {
+      const encoded = getCompressedUrlPayload(url);
+      if (!encoded) return null;
+      const decodedText = await inflateZlibBase64(encoded);
+      let decodedMap = null;
+      try {
+        const parsed = JSON.parse(decodedText);
+        if (isValidSourceMapObject(parsed)) decodedMap = parsed;
+      } catch (_) {}
+      return {
+        encoding: "Base64 → zlib/DEFLATE",
+        encodedPayload: encoded,
+        decodedText,
+        decodedMap,
+        decodedUrls: decodedMap ? [] : extractUrlsFromDecodedPayload(decodedText, pageUrl || url)
+      };
+    }
+
     async function loadScannedMapToViewer(item) {
       try {
         setStatus("Loading scanned source map into viewer...");
@@ -1475,6 +1584,8 @@
         } else if (item.guessValid) {
           const text = await fetchText(item.guessUrl);
           mapObj = JSON.parse(text);
+        } else if (item.compressedValid && item.compressedMapData) {
+          mapObj = item.compressedMapData;
         }
 
         if (mapObj) {
@@ -1553,7 +1664,12 @@
           ? "COMMENT MAP ✓"
           : item.guessValid
             ? ".MAP FOUND"
-            : "NO MAP";
+            : item.compressedValid
+              ? "DEFLATE MAP ✓"
+              : item.compressedInfo
+                ? "ZLIB DECODED"
+                : "NO MAP";
+        if (item.compressedValid || item.compressedInfo) badge.classList.add("found");
 
         head.appendChild(title);
         head.appendChild(badge);
@@ -1580,7 +1696,46 @@
           body.appendChild(resolved);
         }
 
-        if (hasValidMap) {
+        if (item.compressedInfo) {
+          const compressed = document.createElement("div");
+          compressed.className = "map-match";
+          compressed.textContent = `${item.compressedInfo.encoding} payload detected.`;
+          body.appendChild(compressed);
+
+          if (item.compressedInfo.decodedText != null) {
+            const decoded = document.createElement("details");
+            decoded.style.marginTop = "8px";
+            const summary = document.createElement("summary");
+            summary.textContent = item.compressedValid
+              ? "Decoded source-map payload"
+              : `Decoded payload (${item.decodedUrls?.length || 0} JS link(s))`;
+            decoded.appendChild(summary);
+            const pre = document.createElement("pre");
+            pre.style.whiteSpace = "pre-wrap";
+            pre.style.wordBreak = "break-word";
+            pre.style.maxHeight = "260px";
+            pre.style.overflow = "auto";
+            pre.textContent = item.compressedInfo.decodedText;
+            decoded.appendChild(pre);
+            body.appendChild(decoded);
+          }
+
+          if (item.decodedUrls?.length) {
+            const links = document.createElement("div");
+            links.className = "map-match";
+            links.textContent = `Decoded JS links: ${item.decodedUrls.length}. They will be scanned normally.`;
+            body.appendChild(links);
+          }
+
+          if (item.compressedInfo.error) {
+            const error = document.createElement("div");
+            error.className = "map-error";
+            error.textContent = "Compressed payload error: " + item.compressedInfo.error;
+            body.appendChild(error);
+          }
+        }
+
+        if (hasValidMap || item.compressedValid) {
           const detail = document.createElement("div");
           detail.className = "map-match";
           const sourceCountStr = item.mapSources != null ? ` • ${item.mapSources} sources` : "";
@@ -1631,6 +1786,10 @@
         commentMatch: null,
         commentValid: false,
         guessValid: false,
+        compressedValid: false,
+        compressedMapData: null,
+        compressedInfo: null,
+        decodedUrls: [],
         mapSources: null,
         mapData: null,
         error: ""
@@ -1665,7 +1824,7 @@
         try {
           const mapText = await fetchText(result.guessUrl);
           const map = JSON.parse(mapText);
-          result.guessValid = !!map && (map.version === 3 && (Array.isArray(map.sources) || Array.isArray(map.sections)));
+          result.guessValid = isValidSourceMapObject(map);
           if (result.guessValid) {
             result.mapData = map;
           }
@@ -1674,8 +1833,34 @@
           }
         } catch (_) {}
 
-        if (!result.commentMatch && !result.guessValid) {
-          result.error = "No usable source map found.";
+        // Normal comment and guessed .map checks always run first. Only then
+        // inspect a URL that contains a zlib-wrapped Base64 payload.
+        if (!result.commentValid && !result.guessValid && looksLikeCompressedPayloadUrl(jsUrl)) {
+          try {
+            result.compressedInfo = await decodeCompressedUrl(jsUrl, pageUrl);
+            result.decodedUrls = result.compressedInfo.decodedUrls || [];
+            if (result.compressedInfo.decodedMap) {
+              result.compressedValid = true;
+              result.compressedMapData = result.compressedInfo.decodedMap;
+              result.mapData = result.compressedMapData;
+              result.mapSources = getMapSourceCount(result.compressedMapData);
+            }
+          } catch (e) {
+            result.compressedInfo = {
+              encoding: "Base64 → zlib/DEFLATE",
+              encodedPayload: getCompressedUrlPayload(jsUrl),
+              decodedText: null,
+              decodedMap: null,
+              decodedUrls: [],
+              error: e.message || String(e)
+            };
+          }
+        }
+
+        if (!result.commentMatch && !result.guessValid && !result.compressedValid) {
+          result.error = result.compressedInfo?.error
+            ? `No usable source map found. Compressed payload detected but could not be decoded: ${result.compressedInfo.error}`
+            : "No usable source map found.";
         }
       } catch (e) {
         result.error = `Could not fetch JS: ${e.message || e}`;
@@ -1790,7 +1975,8 @@
 
         if (!deepBrowserScan) {
           urls = urls.filter(url =>
-            /\.m?js(?:[?#].*)?$/i.test(url)
+            /\.m?js(?:[?#].*)?$/i.test(url) ||
+            looksLikeCompressedPayloadUrl(url)
           );
         }
 
@@ -1803,6 +1989,8 @@
             }
           });
         }
+
+        const seenUrls = new Set(urls);
 
         if ($("scanInline").checked) {
           const doc =
@@ -1917,6 +2105,24 @@
 
             scanState.results.push(result);
 
+            // Unpacked optimizer assets re-enter the normal scanner pipeline.
+            if (Array.isArray(result.decodedUrls)) {
+              for (const decodedUrl of result.decodedUrls) {
+                if (scanState.stop) break;
+                if (sameOrigin) {
+                  try {
+                    if (new URL(decodedUrl).origin !== pageUrl.origin) continue;
+                  } catch (_) {
+                    continue;
+                  }
+                }
+                if (!seenUrls.has(decodedUrl)) {
+                  seenUrls.add(decodedUrl);
+                  urls.push(decodedUrl);
+                }
+              }
+            }
+
             renderScanResults();
             updateButtons();
 
@@ -2009,6 +2215,16 @@
             commentMatch: item.commentMapUrl ? { url: item.commentMapUrl, raw: item.commentMapUrl, embedded: item.commentMapUrl.startsWith("data:") } : null,
             commentValid: item.source === "comment",
             guessValid: item.source === "guessed",
+            compressedValid: item.source === "compressed-zlib",
+            compressedMapData: null,
+            compressedInfo: item.compressedEncoding ? {
+              encoding: item.compressedEncoding,
+              encodedPayload: item.compressedPayload || null,
+              decodedText: item.decodedPayload || null,
+              decodedMap: null,
+              decodedUrls: item.decodedUrls || []
+            } : null,
+            decodedUrls: item.decodedUrls || [],
             mapSources: null,
             mapData: null,
             error: item.error || ""
