@@ -1,7 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="https://jsmaps.github.io/favicon.svg">
@@ -21,7 +20,7 @@
     <meta name="twitter:title" content="JS Source Map Viewer &amp; Scanner">
     <meta name="twitter:description" content="Find, inspect, and download JavaScript source maps and mapped source files.">
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="./JS Source Map Viewer &amp; Scanner_files/jszip.min.js.download"></script>
   <style>
     :root {
       --bg-main: #090d16;
@@ -816,7 +815,7 @@
 
           <div class="map-results" id="mapResults">
           <div class="scan-empty">
-            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
+            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON (site report, or a JS-file list from the extension)<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
           </div></div>
         </div>
       </div>
@@ -1622,7 +1621,7 @@
         $("clearContainer").hidden = true;
         box.innerHTML = `
           <div class="scan-empty">
-            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
+            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON (site report, or a JS-file list from the extension)<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
           </div>`;
         attachReportFileInput();
         return;
@@ -1869,6 +1868,153 @@
       return result;
     }
 
+    // Shared worker loop: checks each URL in `urls` for a source map,
+    // appending to scanState.results and updating the UI as it goes. Used
+    // both by a normal scan (after discovering script URLs from the page)
+    // and by importing a JS-file-list report (e.g. from the extension),
+    // which already has its URL list and just needs this checking pass.
+    async function checkUrlsForMaps(urls, pageUrlHref, { seenUrls, sameOrigin, statusPrefix = "" } = {}) {
+      seenUrls = seenUrls || new Set(urls);
+      const concurrency = 4;
+      let next = 0;
+
+      async function worker() {
+        while (!scanState.stop) {
+          const index = next++;
+
+          if (index >= urls.length) return;
+
+          const jsUrl = urls[index];
+
+          $("scanProgressText").textContent =
+            `${statusPrefix}Checking ${index + 1}/${urls.length}: ${jsUrl}`;
+
+          const result =
+            await scanOneJs(jsUrl, pageUrlHref);
+
+          scanState.results.push(result);
+
+          // Unpacked optimizer assets re-enter the normal scanner pipeline.
+          if (Array.isArray(result.decodedUrls)) {
+            for (const decodedUrl of result.decodedUrls) {
+              if (scanState.stop) break;
+              if (sameOrigin) {
+                try {
+                  if (new URL(decodedUrl).origin !== new URL(pageUrlHref).origin) continue;
+                } catch (_) {
+                  continue;
+                }
+              }
+              if (!seenUrls.has(decodedUrl)) {
+                seenUrls.add(decodedUrl);
+                urls.push(decodedUrl);
+              }
+            }
+          }
+
+          renderScanResults();
+          updateButtons();
+
+          const total =
+            scanState.results.length;
+
+          const comments =
+            scanState.results.filter(
+              x => x.commentMatch
+            ).length;
+
+          const validMaps =
+            scanState.results.filter(
+              x => x.commentValid || x.guessValid
+            ).length;
+
+          const failures =
+            scanState.results.filter(
+              x => x.error && !x.commentMatch
+            ).length;
+
+          updateScanSummary(
+            total,
+            comments,
+            validMaps,
+            failures
+          );
+        }
+      }
+
+      await Promise.all(
+        Array.from(
+          {
+            length:
+              Math.min(
+                concurrency,
+                urls.length || 1
+              )
+          },
+          worker
+        )
+      );
+    }
+
+    // Runs the map-checking pass on a JS file list that arrived from an
+    // uploaded Report JSON (e.g. exported by the JS File Scanner extension)
+    // rather than being discovered by fetching the page's HTML here. This
+    // picks up right where that extension left off.
+    async function runImportedFileListScan(urls, scannedUrlRaw) {
+      if (scanState.running) return;
+
+      let pageUrlHref;
+      try {
+        pageUrlHref = scannedUrlRaw ? normalizeUrl(scannedUrlRaw).href : (urls[0] || location.href);
+      } catch (_) {
+        pageUrlHref = urls[0] || location.href;
+      }
+
+      const sameOrigin = $("sameOriginOnly").checked;
+
+      scanState.running = true;
+      scanState.stop = false;
+      scanState.results = [];
+
+      $("scanBtn").disabled = true;
+      $("stopScanBtn").disabled = false;
+      $("scanSummary").hidden = true;
+      $("clearContainer").hidden = true;
+      $("mapResults").innerHTML =
+        '<div class="scan-empty">Checking imported JS files for source maps...</div>';
+
+      try {
+        let filteredUrls = [...new Set(urls.filter(u => /^https?:\/\//i.test(u)))];
+
+        if (sameOrigin) {
+          filteredUrls = filteredUrls.filter(url => {
+            try {
+              return new URL(url).origin === new URL(pageUrlHref).origin;
+            } catch (_) {
+              return false;
+            }
+          });
+        }
+
+        updateButtons();
+        $("scanProgressText").textContent =
+          `Loaded ${filteredUrls.length} JS file URL(s) from extension report. Checking maps...`;
+
+        await checkUrlsForMaps(filteredUrls, pageUrlHref, { sameOrigin, statusPrefix: "Imported list: " });
+
+        $("scanProgressText").textContent = scanState.stop
+          ? "Scan stopped."
+          : `Finished. Checked ${filteredUrls.length} JS file(s) from the imported list.`;
+      } catch (e) {
+        console.error(e);
+        $("scanProgressText").textContent = `Scan failed: ${e.message || e}.`;
+      } finally {
+        scanState.running = false;
+        $("scanBtn").disabled = false;
+        $("stopScanBtn").disabled = true;
+      }
+    }
+
     async function runSiteScan() {
       if (scanState.running) return;
 
@@ -2086,85 +2232,7 @@
         $("scanProgressText").textContent =
           `Found ${urls.length} unique JavaScript file(s). Checking maps...`;
 
-        const concurrency = 4;
-        let next = 0;
-
-        async function worker() {
-          while (!scanState.stop) {
-            const index = next++;
-
-            if (index >= urls.length) return;
-
-            const jsUrl = urls[index];
-
-            $("scanProgressText").textContent =
-              `Checking ${index + 1}/${urls.length}: ${jsUrl}`;
-
-            const result =
-              await scanOneJs(jsUrl, pageUrl.href);
-
-            scanState.results.push(result);
-
-            // Unpacked optimizer assets re-enter the normal scanner pipeline.
-            if (Array.isArray(result.decodedUrls)) {
-              for (const decodedUrl of result.decodedUrls) {
-                if (scanState.stop) break;
-                if (sameOrigin) {
-                  try {
-                    if (new URL(decodedUrl).origin !== pageUrl.origin) continue;
-                  } catch (_) {
-                    continue;
-                  }
-                }
-                if (!seenUrls.has(decodedUrl)) {
-                  seenUrls.add(decodedUrl);
-                  urls.push(decodedUrl);
-                }
-              }
-            }
-
-            renderScanResults();
-            updateButtons();
-
-            const total =
-              scanState.results.length;
-
-            const comments =
-              scanState.results.filter(
-                x => x.commentMatch
-              ).length;
-
-            const validMaps =
-              scanState.results.filter(
-                x => x.commentValid || x.guessValid
-              ).length;
-
-            const failures =
-              scanState.results.filter(
-                x => x.error && !x.commentMatch
-              ).length;
-
-            updateScanSummary(
-              total,
-              comments,
-              validMaps,
-              failures
-            );
-          }
-        }
-
-        await Promise.all(
-          Array.from(
-            {
-              length:
-                Math.min(
-                  concurrency,
-                  urls.length || 1
-                )
-            },
-            worker
-          )
-        );
+        await checkUrlsForMaps(urls, pageUrl.href, { seenUrls, sameOrigin });
 
         if (scanState.stop) {
           $("scanProgressText").textContent =
@@ -2201,12 +2269,35 @@
           const text = await file.text();
           const data = JSON.parse(text);
 
-          if (!data.results || !Array.isArray(data.results)) {
+          if (!data.results && !Array.isArray(data.jsFiles)) {
             throw new Error("Invalid report format: missing 'results' array.");
           }
 
           if (data.scannedUrl) {
             document.getElementById("scanUrl").value = data.scannedUrl;
+          }
+
+          // Reports from the JS File Scanner extension only contain a list
+          // of JS file URLs (no source-map info) — recognized either by an
+          // explicit marker or by a `jsFiles` array with no per-item map
+          // data. Route those into a real scan of that file list instead
+          // of rendering blank "no map" rows for everything.
+          const isFileListReport =
+            data.reportType === "js-file-list" ||
+            (Array.isArray(data.jsFiles) &&
+              !(data.results || []).some(r => r.source || r.commentMapUrl || r.hasValidMap));
+
+          if (isFileListReport) {
+            const urls = Array.isArray(data.jsFiles) && data.jsFiles.length
+              ? data.jsFiles
+              : (data.results || []).map(r => r.jsUrl).filter(Boolean);
+
+            if (!urls.length) throw new Error("Report contained no JS file URLs.");
+
+            input.value = "";
+            setStatus(`Loaded ${urls.length} JS file URL(s) from extension report. Checking each for a source map...`);
+            await runImportedFileListScan(urls, data.scannedUrl);
+            return;
           }
 
           scanState.results = data.results.map(item => ({
@@ -2271,5 +2362,6 @@
       $("toggleScannerText").textContent = isCollapsed ? "Expand" : "Collapse";
     });
   </script>
-</body>
-</html>
+
+
+</body></html>
