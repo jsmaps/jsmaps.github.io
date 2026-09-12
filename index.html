@@ -20,6 +20,7 @@
     <meta name="twitter:title" content="JS Source Map Viewer & Scanner">
     <meta name="twitter:description" content="Find, inspect, and download JavaScript source maps and mapped source files.">
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js"></script>
   <style>
     :root {
       --bg-main: #090d16;
@@ -814,7 +815,7 @@
 
           <div class="map-results" id="mapResults">
           <div class="scan-empty">
-            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
+            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON (site report, or a JS-file list from the extension)<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
           </div></div>
         </div>
       </div>
@@ -1139,6 +1140,11 @@
         return;
       }
 
+      if (typeof JSZip === "undefined") {
+        setStatus("Couldn't load the ZIP library (JSZip) — check your internet connection and reload the page.");
+        return;
+      }
+
       const zip = new JSZip();
       const usedNames = new Set();
       let fileCount = 0;
@@ -1336,6 +1342,10 @@
     });
 
     document.getElementById("zipBtn").addEventListener("click", async () => {
+      if (typeof JSZip === "undefined") {
+        setStatus("Couldn't load the ZIP library (JSZip) — check your internet connection and reload the page.");
+        return;
+      }
       if (sources.length) {
         const o = new JSZip;
         let t = 0;
