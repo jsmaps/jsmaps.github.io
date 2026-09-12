@@ -1829,17 +1829,25 @@
           }
         }
 
-        try {
-          const mapText = await fetchText(result.guessUrl);
-          const map = JSON.parse(mapText);
-          result.guessValid = isValidSourceMapObject(map);
-          if (result.guessValid) {
-            result.mapData = map;
-          }
-          if (result.guessValid && result.mapSources == null) {
-            result.mapSources = getMapSourceCount(map);
-          }
-        } catch (_) {}
+        // Only fall back to the guessed .js.map when the comment-referenced
+        // map wasn't already valid. Some sites serve a stripped/no-content
+        // map at the plain guessed path (for error-tracking tools) while the
+        // comment-linked one has the real sourcesContent — always trying
+        // the guess and letting it win on success used to silently clobber
+        // a good map with a content-less one.
+        if (!result.commentValid) {
+          try {
+            const mapText = await fetchText(result.guessUrl);
+            const map = JSON.parse(mapText);
+            result.guessValid = isValidSourceMapObject(map);
+            if (result.guessValid) {
+              result.mapData = map;
+            }
+            if (result.guessValid && result.mapSources == null) {
+              result.mapSources = getMapSourceCount(map);
+            }
+          } catch (_) {}
+        }
 
         // Normal comment and guessed .map checks always run first. Only then
         // inspect a URL that contains a zlib-wrapped Base64 payload.
