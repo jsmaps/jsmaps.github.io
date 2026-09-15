@@ -1181,69 +1181,51 @@
 
       for (let i = 0; i < scanState.results.length; i++) {
         const item = scanState.results[i];
+        let mapObj = null;
 
         if (!item.jsUrl || item.jsUrl.includes("#inline-script-")) {
           if (item.commentMatch?.embedded) {
             try {
-              const map = decodeDataMap(item.commentMatch.raw);
-              if (map) {
-                zip.file(
-                  uniqueZipName(`inline-${i + 1}.map`),
-                  JSON.stringify(map, null, 2)
-                );
-                fileCount++;
-              }
+              mapObj = decodeDataMap(item.commentMatch.raw);
             } catch (_) {
               failedCount++;
+              continue;
             }
+          } else {
+            continue;
           }
-          continue;
+        } else {
+          mapObj = item.mapData || null;
         }
+
+        if (!mapObj) continue;
 
         const jsName = resultBaseName(item.jsUrl, `script-${i + 1}.js`);
 
         setStatus(
-          `Downloading scanned result ${i + 1}/${scanState.results.length}: ${jsName}`
+          `Extracting sources ${i + 1}/${scanState.results.length}: ${jsName}`
         );
 
-        try {
-          const jsText = await fetchText(item.jsUrl);
-          zip.file(uniqueZipName(jsName), jsText);
-          fileCount++;
-        } catch (_) {
-          failedCount++;
-        }
+        const flattenedSources = flattenSourceMap(mapObj);
 
-        const mapObj = item.mapData || null;
+        for (let s = 0; s < flattenedSources.length; s++) {
+          const source = flattenedSources[s];
 
-        if (mapObj) {
-          zip.file(
-            uniqueZipName(`${jsName}.map`),
-            JSON.stringify(mapObj, null, 2)
-          );
-          fileCount++;
-
-          const flattenedSources = flattenSourceMap(mapObj);
-
-          for (let s = 0; s < flattenedSources.length; s++) {
-            const source = flattenedSources[s];
-
-            if (source.content === null || source.content === undefined) {
-              continue;
-            }
-
-            const sourceName = cleanFilename(
-              source.name || `source-${s + 1}.txt`
-            );
-
-            zip.file(uniqueZipName(sourceName), source.content);
-            fileCount++;
+          if (source.content === null || source.content === undefined) {
+            continue;
           }
+
+          const sourceName = cleanFilename(
+            source.name || `source-${s + 1}.txt`
+          );
+
+          zip.file(uniqueZipName(sourceName), source.content);
+          fileCount++;
         }
       }
 
       if (fileCount === 0) {
-        setStatus("Nothing could be downloaded from the scanned results.");
+        setStatus("No mapped source files with embedded content were found in the scanned results.");
         return;
       }
 
@@ -1256,11 +1238,11 @@
           compressionOptions: { level: 6 }
         });
 
-        downloadBlob(zipBlob, "all-scanned-results.zip");
+        downloadBlob(zipBlob, "all-mapped-sources.zip");
 
         setStatus(
-          `Successfully downloaded ${fileCount} files from ${scanState.results.length} scanned results` +
-          (failedCount ? ` (${failedCount} could not be fetched).` : ".")
+          `Successfully downloaded ${fileCount} mapped source file(s) from ${scanState.results.length} scanned results` +
+          (failedCount ? ` (${failedCount} embedded map(s) could not be decoded).` : ".")
         );
       } catch (e) {
         console.error(e);
