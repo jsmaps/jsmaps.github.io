@@ -735,6 +735,242 @@
         min-height: 400px
       }
     }
+    /* Regex Builder modal */
+    .rb-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 6, 12, .72);
+      backdrop-filter: blur(2px);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px
+    }
+
+    .rb-overlay.rb-open {
+      display: flex
+    }
+
+    .rb-modal {
+      width: 100%;
+      max-width: 640px;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .5)
+    }
+
+    .rb-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      background: var(--bg-card);
+      z-index: 1
+    }
+
+    .rb-header h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .rb-step-dots {
+      display: flex;
+      gap: 6px
+    }
+
+    .rb-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--border-color);
+      transition: background .15s ease, transform .15s ease
+    }
+
+    .rb-dot.rb-dot-active {
+      background: var(--primary);
+      transform: scale(1.2)
+    }
+
+    .rb-dot.rb-dot-done {
+      background: var(--accent-blue)
+    }
+
+    .rb-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px
+    }
+
+    .rb-close:hover {
+      color: #fff;
+      background: var(--bg-card-hover)
+    }
+
+    .rb-body {
+      padding: 18px 20px;
+      min-height: 220px
+    }
+
+    .rb-step-title {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      letter-spacing: .03em
+    }
+
+    .rb-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px
+    }
+
+    .rb-select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 12px;
+      margin-bottom: 6px
+    }
+
+    .rb-empty {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin: 0 0 10px
+    }
+
+    .rb-instructions {
+      color: var(--text-muted);
+      font-size: 12.5px;
+      line-height: 1.5;
+      margin: 10px 0
+    }
+
+    .rb-url-display {
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      word-break: break-all;
+      user-select: text;
+      cursor: text;
+      color: var(--text-main)
+    }
+
+    .rb-url-display .rb-removed {
+      color: #fca5a5;
+      background: rgba(220, 38, 38, .18);
+      text-decoration: line-through;
+      border-radius: 3px
+    }
+
+    .rb-url-display .rb-replaced {
+      color: #93c5fd;
+      background: rgba(37, 99, 235, .18);
+      border-radius: 3px
+    }
+
+    .rb-url-display .rb-replaced::after {
+      content: attr(data-rb-with);
+      color: #fbbf24;
+      background: rgba(217, 119, 6, .2);
+      border-radius: 3px;
+      padding: 0 3px;
+      margin-left: 2px
+    }
+
+    .rb-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px
+    }
+
+    .rb-replace-input {
+      flex: 1 1 160px;
+      padding: 6px 10px;
+      font-family: monospace;
+      font-size: 12px
+    }
+
+    .rb-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .rb-preview-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px
+    }
+
+    .rb-preview-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .03em
+    }
+
+    .rb-preview-value {
+      display: block;
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12.5px;
+      word-break: break-all;
+      color: #a7f3d0
+    }
+
+    .rb-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-color);
+      position: sticky;
+      bottom: 0;
+      background: var(--bg-card)
+    }
+
+    .rb-footer .rb-apply {
+      margin-left: auto
+    }
+
+    .rb-apply {
+      background: var(--primary)
+    }
+
+    .rb-apply:hover:not(:disabled) {
+      background: var(--primary-hover)
+    }
   </style>
 </head>
 <body>
@@ -799,6 +1035,9 @@
                   <input id="regexPattern" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Match Pattern">
                   <input id="regexReplacement" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Replacement (e.g. $1)">
                 </div>
+                <div style="margin-top: 6px;">
+                  <button type="button" id="openRegexBuilderBtn" class="secondary small-btn">🛠 Build Rule From a Failed URL</button>
+                </div>
               </div>
             </div>
           </div>
@@ -860,6 +1099,85 @@
         </div>
         <pre id="code"><div class="empty">Select a source from the list to view it.</div></pre>
       </main>
+    </div>
+  </div>
+
+  <div id="regexBuilderOverlay" class="rb-overlay">
+    <div class="rb-modal" role="dialog" aria-modal="true" aria-labelledby="rbTitle">
+      <div class="rb-header">
+        <div>
+          <h2 id="rbTitle">Build a URL Rewrite Rule</h2>
+          <div class="rb-step-dots" id="rbStepDots">
+            <span class="rb-dot" data-dot="1"></span>
+            <span class="rb-dot" data-dot="2"></span>
+            <span class="rb-dot" data-dot="3"></span>
+          </div>
+        </div>
+        <button type="button" id="rbCloseBtn" class="rb-close" aria-label="Close">×</button>
+      </div>
+
+      <div class="rb-body">
+        <!-- Step 1: pick a URL -->
+        <div class="rb-step" id="rbStep1" data-step="1">
+          <p class="rb-step-title">Step 1 — Pick a failed URL</p>
+          <label class="rb-label" for="rbUrlSelect">Which URL do you want to fix?</label>
+          <select id="rbUrlSelect" class="rb-select"></select>
+          <p id="rbEmptyState" class="rb-empty" hidden="">
+            No failed URLs yet — run a scan first, or pick any URL below once one shows up.
+          </p>
+          <p class="rb-instructions">
+            We'll use this one URL as an example to build a rule that can apply to every file on the same host.
+          </p>
+        </div>
+
+        <!-- Step 2: mark edits -->
+        <div class="rb-step" id="rbStep2" data-step="2" hidden="">
+          <p class="rb-step-title">Step 2 — Select the part(s) to fix</p>
+          <p class="rb-instructions">
+            Drag to select part of the URL below, then click <strong>Remove Selected</strong> or type a replacement and
+            click <strong>Replace Selected</strong>. You can make more than one edit.
+          </p>
+
+          <div id="rbUrlDisplay" class="rb-url-display"></div>
+
+          <div class="rb-actions">
+            <button type="button" id="rbRemoveBtn" class="secondary small-btn">Remove Selected</button>
+            <input type="text" id="rbReplaceInput" class="scan-url rb-replace-input" placeholder="Replace with…">
+            <button type="button" id="rbReplaceBtn" class="secondary small-btn">Replace Selected</button>
+          </div>
+          <div class="rb-actions">
+            <button type="button" id="rbUndoBtn" class="secondary small-btn">Undo Last Edit</button>
+            <button type="button" id="rbResetBtn" class="secondary small-btn">Reset</button>
+          </div>
+        </div>
+
+        <!-- Step 3: preview & confirm -->
+        <div class="rb-step" id="rbStep3" data-step="3" hidden="">
+          <p class="rb-step-title">Step 3 — Review & confirm</p>
+          <div class="rb-preview">
+            <div class="rb-preview-row">
+              <span class="rb-preview-label">Preview result</span>
+              <code id="rbPreviewResult" class="rb-preview-value">—</code>
+            </div>
+            <div class="rb-preview-row">
+              <span class="rb-preview-label">Pattern</span>
+              <code id="rbPreviewPattern" class="rb-preview-value">—</code>
+            </div>
+            <div class="rb-preview-row">
+              <span class="rb-preview-label">Replacement</span>
+              <code id="rbPreviewReplacement" class="rb-preview-value">—</code>
+            </div>
+          </div>
+          <p class="rb-instructions">
+            This replaces whatever is currently in the URL Rewrite fields. You can still tweak it there afterward.
+          </p>
+        </div>
+      </div>
+
+      <div class="rb-footer">
+        <button type="button" id="rbBackBtn" class="secondary" hidden="">Back</button>
+        <button type="button" id="rbNextBtn" class="rb-apply" disabled="">Next</button>
+      </div>
     </div>
   </div>
 
@@ -1084,6 +1402,296 @@
         return url;
       }
     }
+
+    // ---------------------------------------------------------------
+    // Regex Builder: pick a failed URL, select parts of it with the
+    // mouse, mark them "remove" or "replace with X", and it generates
+    // a pattern/replacement pair for the URL Rewrite fields above.
+    //
+    // How it turns edits into one regex: everything before the first
+    // edit and any untouched text between edits is matched/reproduced
+    // literally. Whatever's left AFTER the last edit is captured as a
+    // wildcard ( (.*)$ ) and echoed back via $1 — so the rule keeps
+    // working across every filename/hash on that host, not just the
+    // one example URL it was built from.
+    // ---------------------------------------------------------------
+
+    function escapeRegExp(str) {
+      return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    const rbState = {
+      url: "",
+      edits: [] // { start, end, type: "remove" | "replace", text: "" }
+    };
+
+    function rbEscapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function rbBuildRule() {
+      const url = rbState.url;
+      const edits = [...rbState.edits].sort((a, b) => a.start - b.start);
+
+      if (!url) return null;
+
+      if (!edits.length) {
+        return {
+          pattern: "^" + escapeRegExp(url) + "$",
+          replacement: url,
+          preview: url
+        };
+      }
+
+      let patternParts = ["^"];
+      let replacementParts = [];
+      let cursor = 0;
+
+      for (const edit of edits) {
+        const gap = url.slice(cursor, edit.start);
+        patternParts.push(escapeRegExp(gap));
+        replacementParts.push(gap);
+
+        const original = url.slice(edit.start, edit.end);
+        patternParts.push(escapeRegExp(original));
+        replacementParts.push(edit.type === "remove" ? "" : edit.text);
+
+        cursor = edit.end;
+      }
+
+      const suffix = url.slice(cursor);
+      patternParts.push("(.*)$");
+      replacementParts.push("$1");
+
+      const pattern = patternParts.join("");
+      const replacement = replacementParts.join("");
+
+      let preview = url;
+      try {
+        preview = url.replace(new RegExp(pattern, "g"), replacement);
+      } catch (_) {
+        /* shown as the raw pattern below instead */
+      }
+
+      return { pattern, replacement, preview };
+    }
+
+    function rbRender() {
+      const display = document.getElementById("rbUrlDisplay");
+      const url = rbState.url;
+      const edits = [...rbState.edits].sort((a, b) => a.start - b.start);
+
+      if (!url) {
+        display.innerHTML = "";
+      } else if (!edits.length) {
+        display.textContent = url;
+      } else {
+        let html = "";
+        let cursor = 0;
+
+        for (const edit of edits) {
+          html += rbEscapeHtml(url.slice(cursor, edit.start));
+          const original = rbEscapeHtml(url.slice(edit.start, edit.end));
+
+          if (edit.type === "remove") {
+            html += `<span class="rb-removed">${original}</span>`;
+          } else {
+            html += `<span class="rb-replaced" data-rb-with="${rbEscapeHtml(edit.text)}">${original}</span>`;
+          }
+
+          cursor = edit.end;
+        }
+
+        html += rbEscapeHtml(url.slice(cursor));
+        display.innerHTML = html;
+      }
+
+      const rule = rbBuildRule();
+
+      document.getElementById("rbPreviewResult").textContent = rule ? rule.preview : "\u2014";
+      document.getElementById("rbPreviewPattern").textContent = rule ? rule.pattern : "\u2014";
+      document.getElementById("rbPreviewReplacement").textContent = rule ? rule.replacement : "\u2014";
+      document.getElementById("rbUndoBtn").disabled = !edits.length;
+
+      rbUpdateFooter();
+    }
+
+    function rbGetSelectionRange() {
+      const display = document.getElementById("rbUrlDisplay");
+      const sel = window.getSelection();
+
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+
+      const range = sel.getRangeAt(0);
+      if (!display.contains(range.commonAncestorContainer)) return null;
+
+      // Measure the selection's offsets against the plain-text URL by
+      // walking a cloned range from the display's start to each boundary.
+      const preStart = document.createRange();
+      preStart.selectNodeContents(display);
+      preStart.setEnd(range.startContainer, range.startOffset);
+      const start = preStart.toString().length;
+
+      const preEnd = document.createRange();
+      preEnd.selectNodeContents(display);
+      preEnd.setEnd(range.endContainer, range.endOffset);
+      const end = preEnd.toString().length;
+
+      if (end <= start) return null;
+
+      // Reject a selection that overlaps an edit already made.
+      const overlaps = rbState.edits.some(e => start < e.end && end > e.start);
+      if (overlaps) {
+        setStatus("That selection overlaps an existing edit — undo it first or select a different part.");
+        return null;
+      }
+
+      return { start, end };
+    }
+
+    function rbPopulateUrlSelect() {
+      const select = document.getElementById("rbUrlSelect");
+      const emptyState = document.getElementById("rbEmptyState");
+      select.innerHTML = "";
+
+      const failed = scanState.results.filter(r => r.jsUrl && r.error);
+      const list = failed.length
+        ? failed
+        : scanState.results.filter(r => r.jsUrl && !r.jsUrl.includes("#inline-script-"));
+
+      emptyState.hidden = failed.length > 0;
+
+      if (!list.length) {
+        const opt = document.createElement("option");
+        opt.textContent = "No scanned URLs yet";
+        opt.disabled = true;
+        select.appendChild(opt);
+        return;
+      }
+
+      for (const item of list) {
+        const opt = document.createElement("option");
+        opt.value = item.jsUrl;
+        const errPart = item.error ? ` \u2014 ${item.error}` : "";
+        opt.textContent = item.jsUrl + errPart;
+        select.appendChild(opt);
+      }
+    }
+
+    // --- Step wizard navigation ---
+    // rbState.step: 1 = pick a URL, 2 = mark edits, 3 = review & confirm.
+    rbState.step = 1;
+    const RB_TOTAL_STEPS = 3;
+
+    function rbUpdateFooter() {
+      const backBtn = document.getElementById("rbBackBtn");
+      const nextBtn = document.getElementById("rbNextBtn");
+
+      backBtn.hidden = rbState.step === 1;
+
+      if (rbState.step === RB_TOTAL_STEPS) {
+        nextBtn.textContent = "Use This Rule";
+        nextBtn.disabled = !rbState.url || rbState.edits.length === 0;
+      } else {
+        nextBtn.textContent = "Next";
+        nextBtn.disabled = rbState.step === 1 ? !rbState.url : false;
+      }
+
+      document.querySelectorAll(".rb-dot").forEach(dot => {
+        const n = Number(dot.dataset.dot);
+        dot.classList.toggle("rb-dot-active", n === rbState.step);
+        dot.classList.toggle("rb-dot-done", n < rbState.step);
+      });
+    }
+
+    function rbGoToStep(step) {
+      rbState.step = step;
+      for (let n = 1; n <= RB_TOTAL_STEPS; n++) {
+        document.getElementById(`rbStep${n}`).hidden = n !== step;
+      }
+      rbUpdateFooter();
+    }
+
+    function rbOpen() {
+      rbPopulateUrlSelect();
+      const select = document.getElementById("rbUrlSelect");
+      rbState.url = select.value || "";
+      rbState.edits = [];
+      document.getElementById("rbReplaceInput").value = "";
+      rbRender();
+      rbGoToStep(1);
+      document.getElementById("regexBuilderOverlay").classList.add("rb-open");
+    }
+
+    function rbClose() {
+      document.getElementById("regexBuilderOverlay").classList.remove("rb-open");
+    }
+
+    document.getElementById("openRegexBuilderBtn").addEventListener("click", rbOpen);
+    document.getElementById("rbCloseBtn").addEventListener("click", rbClose);
+    document.getElementById("regexBuilderOverlay").addEventListener("click", e => {
+      if (e.target.id === "regexBuilderOverlay") rbClose();
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && document.getElementById("regexBuilderOverlay").classList.contains("rb-open")) {
+        rbClose();
+      }
+    });
+
+    document.getElementById("rbUrlSelect").addEventListener("change", e => {
+      rbState.url = e.target.value || "";
+      rbState.edits = [];
+      rbRender();
+    });
+
+    document.getElementById("rbRemoveBtn").addEventListener("click", () => {
+      const range = rbGetSelectionRange();
+      if (!range) return;
+      rbState.edits.push({ ...range, type: "remove", text: "" });
+      window.getSelection()?.removeAllRanges();
+      rbRender();
+    });
+
+    document.getElementById("rbReplaceBtn").addEventListener("click", () => {
+      const range = rbGetSelectionRange();
+      if (!range) return;
+      const text = document.getElementById("rbReplaceInput").value;
+      rbState.edits.push({ ...range, type: "replace", text });
+      window.getSelection()?.removeAllRanges();
+      document.getElementById("rbReplaceInput").value = "";
+      rbRender();
+    });
+
+    document.getElementById("rbUndoBtn").addEventListener("click", () => {
+      rbState.edits.pop();
+      rbRender();
+    });
+
+    document.getElementById("rbResetBtn").addEventListener("click", () => {
+      rbState.edits = [];
+      rbRender();
+    });
+
+    document.getElementById("rbBackBtn").addEventListener("click", () => {
+      if (rbState.step > 1) rbGoToStep(rbState.step - 1);
+    });
+
+    document.getElementById("rbNextBtn").addEventListener("click", () => {
+      if (rbState.step < RB_TOTAL_STEPS) {
+        rbGoToStep(rbState.step + 1);
+        return;
+      }
+
+      const rule = rbBuildRule();
+      if (!rule) return;
+      document.getElementById("regexPattern").value = rule.pattern;
+      document.getElementById("regexReplacement").value = rule.replacement;
+      setStatus("URL rewrite rule applied from the builder.");
+      rbClose();
+    });
 
     document.getElementById("jsFile").addEventListener("change", e => {
       jsFile = e.target.files[0];
@@ -2361,6 +2969,4 @@
       $("toggleScannerText").textContent = isCollapsed ? "Expand" : "Collapse";
     });
   </script>
-
-
 </body></html>
