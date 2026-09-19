@@ -709,6 +709,81 @@
       color: #fca5a5;
     }
 
+    /* URL Rewrite Rules */
+    .rewrite-rules {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+    .rewrite-rules-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .rewrite-rules-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .rewrite-rule-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .rewrite-rule {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+    }
+    .rewrite-rule.disabled { opacity: .5; }
+    .rewrite-rule-toggle {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .rewrite-rule-info { min-width: 0; }
+    .rewrite-rule-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rewrite-rule-code {
+      margin-top: 2px;
+      color: var(--text-muted);
+      font: 10px/1.4 SFMono-Regular, Consolas, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rewrite-rule-remove {
+      padding: 5px 8px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: #fca5a5;
+      font-size: 11px;
+    }
+    .rewrite-rule-remove:hover:not(:disabled) {
+      background: rgba(220,38,38,.12);
+      border-color: rgba(220,38,38,.4);
+    }
+    .rewrite-rules-empty {
+      color: #4b5563;
+      font-size: 11px;
+      padding: 5px 0;
+    }
     @media (max-width:800px) {
       .scan-controls {
         flex-direction: column;
@@ -1032,11 +1107,20 @@
                 <span class="option-title">URL Rewrite (Regex)</span>
                 <span class="option-desc">Rewrite discovered JS & .map URLs before requesting them (e.g. bypass CDN subdomains).</span>
                 <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                  <input id="regexRuleName" class="scan-url" style="padding: 6px 10px; font-size: 12px; flex: 0 1 180px;" placeholder="Rule name (optional)">
                   <input id="regexPattern" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Match Pattern">
                   <input id="regexReplacement" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Replacement (e.g. $1)">
                 </div>
-                <div style="margin-top: 6px;">
+                <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button type="button" id="addRegexRuleBtn" class="small-btn">＋ Add Rule</button>
                   <button type="button" id="openRegexBuilderBtn" class="secondary small-btn">🛠 Build Rule From a Failed URL</button>
+                </div>
+                <div class="rewrite-rules">
+                  <div class="rewrite-rules-head">
+                    <span class="rewrite-rules-title">Saved Rewrite Rules</span>
+                    <span id="rewriteRuleCount" class="badge">0</span>
+                  </div>
+                  <div id="rewriteRuleList" class="rewrite-rule-list"></div>
                 </div>
               </div>
             </div>
@@ -1387,20 +1471,124 @@
       document.getElementById("status").textContent = e;
     }
 
+    const REWRITE_RULES_KEY = "jsmaps-url-rewrite-rules-v1";
+    let rewriteRules = loadRewriteRules();
+
+    function loadRewriteRules() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(REWRITE_RULES_KEY) || "[]");
+        return Array.isArray(saved) ? saved.filter(r => r && r.pattern) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveRewriteRules() {
+      try {
+        localStorage.setItem(REWRITE_RULES_KEY, JSON.stringify(rewriteRules));
+      } catch (_) {}
+    }
+
     function applyUrlRewrite(url) {
       if (!url) return url;
-      const pattern = $("regexPattern")?.value.trim();
-      const replacement = $("regexReplacement")?.value || "";
+      let rewritten = url;
 
-      if (!pattern) return url;
+      for (const rule of rewriteRules) {
+        if (!rule.enabled) continue;
+        try {
+          rewritten = rewritten.replace(new RegExp(rule.pattern, "g"), rule.replacement || "");
+        } catch (err) {
+          console.warn(`Invalid rewrite regex in rule "${rule.name || rule.pattern}":`, err);
+        }
+      }
+
+      return rewritten;
+    }
+
+    function renderRewriteRules() {
+      const list = $("rewriteRuleList");
+      if (!list) return;
+      list.innerHTML = "";
+      $("rewriteRuleCount").textContent = rewriteRules.length;
+
+      if (!rewriteRules.length) {
+        list.innerHTML = '<div class="rewrite-rules-empty">No saved rules. Add one above.</div>';
+        return;
+      }
+
+      rewriteRules.forEach((rule, index) => {
+        const row = document.createElement("div");
+        row.className = `rewrite-rule${rule.enabled ? "" : " disabled"}`;
+
+        const toggle = document.createElement("input");
+        toggle.type = "checkbox";
+        toggle.className = "rewrite-rule-toggle";
+        toggle.checked = rule.enabled !== false;
+        toggle.title = "Enable or disable this rule";
+        toggle.addEventListener("change", () => {
+          rewriteRules[index].enabled = toggle.checked;
+          saveRewriteRules();
+          renderRewriteRules();
+        });
+
+        const info = document.createElement("div");
+        info.className = "rewrite-rule-info";
+        const name = document.createElement("div");
+        name.className = "rewrite-rule-name";
+        name.textContent = rule.name || `Rule ${index + 1}`;
+        const code = document.createElement("div");
+        code.className = "rewrite-rule-code";
+        code.textContent = `/${rule.pattern}/g → ${rule.replacement || "∅"}`;
+        info.append(name, code);
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "rewrite-rule-remove";
+        remove.textContent = "Remove";
+        remove.addEventListener("click", () => {
+          rewriteRules.splice(index, 1);
+          saveRewriteRules();
+          renderRewriteRules();
+          setStatus(`Removed rewrite rule: ${rule.name || `Rule ${index + 1}`}`);
+        });
+
+        row.append(toggle, info, remove);
+        list.appendChild(row);
+      });
+    }
+
+    function addRewriteRule(pattern, replacement, name = "") {
+      pattern = String(pattern || "").trim();
+      replacement = String(replacement || "");
+      name = String(name || "").trim();
+      if (!pattern) {
+        setStatus("Enter a regex pattern before adding a rule.");
+        return false;
+      }
 
       try {
-        const re = new RegExp(pattern, "g");
-        return url.replace(re, replacement);
+        new RegExp(pattern, "g");
       } catch (err) {
-        console.warn("Invalid rewrite regex:", err);
-        return url;
+        setStatus(`Invalid regex: ${err.message}`);
+        return false;
       }
+
+      if (rewriteRules.some(r => r.pattern === pattern && r.replacement === replacement)) {
+        setStatus("That rewrite rule is already saved.");
+        return false;
+      }
+
+      rewriteRules.push({
+        id: `rule_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        name: name || `Rule ${rewriteRules.length + 1}`,
+        pattern,
+        replacement,
+        enabled: true
+      });
+      saveRewriteRules();
+      renderRewriteRules();
+      setStatus(`Added rewrite rule: ${name || `Rule ${rewriteRules.length}`}`);
+      return true;
     }
 
     // ---------------------------------------------------------------
@@ -1687,11 +1875,25 @@
 
       const rule = rbBuildRule();
       if (!rule) return;
+      const defaultName = `Rewrite ${rewriteRules.length + 1}`;
+      const name = window.prompt("Name this rewrite rule:", defaultName);
+      if (name === null) return;
+      document.getElementById("regexRuleName").value = name.trim();
       document.getElementById("regexPattern").value = rule.pattern;
       document.getElementById("regexReplacement").value = rule.replacement;
-      setStatus("URL rewrite rule applied from the builder.");
+      addRewriteRule(rule.pattern, rule.replacement, name.trim());
       rbClose();
     });
+
+    document.getElementById("addRegexRuleBtn").addEventListener("click", () => {
+      addRewriteRule(
+        document.getElementById("regexPattern").value,
+        document.getElementById("regexReplacement").value,
+        document.getElementById("regexRuleName").value
+      );
+    });
+
+    renderRewriteRules();
 
     document.getElementById("jsFile").addEventListener("change", e => {
       jsFile = e.target.files[0];
@@ -2172,7 +2374,10 @@
         setStatus("Loading scanned source map into viewer...");
         let mapObj = null;
 
-        if (item.commentValid && item.commentMatch) {
+        if (item.imported && item.importedHasValidMap && item.importedMapUrl) {
+          const text = await fetchText(item.importedMapUrl);
+          mapObj = JSON.parse(text);
+        } else if (item.commentValid && item.commentMatch) {
           if (item.commentMatch.embedded) {
             mapObj = decodeDataMap(item.commentMatch.raw);
           } else {
@@ -2238,7 +2443,9 @@
       });
 
       for (const item of sorted) {
-        const hasValidMap = item.commentValid || item.guessValid;
+        const hasValidMap = item.imported
+          ? item.importedHasValidMap === true
+          : item.commentValid || item.guessValid;
 
         const row = document.createElement("article");
         row.className = "map-result" + (hasValidMap ? " good" : "");
@@ -2258,16 +2465,28 @@
 
         const badge = document.createElement("span");
         badge.className = "map-badge " + (hasValidMap ? "found" : "");
-        badge.textContent = item.commentValid
-          ? "COMMENT MAP ✓"
-          : item.guessValid
-            ? ".MAP FOUND"
-            : item.compressedValid
-              ? "DEFLATE MAP ✓"
-              : item.compressedInfo
-                ? "ZLIB DECODED"
-                : "NO MAP";
-        if (item.compressedValid || item.compressedInfo) badge.classList.add("found");
+
+        if (item.imported) {
+          if (item.importedHasValidMap) {
+            badge.textContent = "VALID MAP ✓";
+            badge.classList.add("found");
+          } else if (item.importedMapUrl) {
+            badge.textContent = "MAP URL FOUND";
+          } else {
+            badge.textContent = "NO MAP";
+          }
+        } else {
+          badge.textContent = item.commentValid
+            ? "COMMENT MAP ✓"
+            : item.guessValid
+              ? ".MAP FOUND"
+              : item.compressedValid
+                ? "DEFLATE MAP ✓"
+                : item.compressedInfo
+                  ? "ZLIB DECODED"
+                  : "NO MAP";
+          if (item.compressedValid || item.compressedInfo) badge.classList.add("found");
+        }
 
         head.appendChild(title);
         head.appendChild(badge);
@@ -2277,10 +2496,39 @@
         body.className = "map-result-body";
 
         const guessed = document.createElement("div");
-        guessed.textContent = "Guessed: " + item.guessUrl;
+        if (item.imported) {
+          guessed.textContent = item.importedMapUrl
+            ? "Map URL: " + item.importedMapUrl
+            : "Map URL: none";
+        } else {
+          guessed.textContent = "Guessed: " + item.guessUrl;
+        }
         body.appendChild(guessed);
 
-        if (item.commentMatch) {
+        if (item.imported) {
+          const sourceLine = document.createElement("div");
+          sourceLine.textContent = "Report source: " + (item.importedSource || "none");
+          body.appendChild(sourceLine);
+
+          if (item.importedMapUrl && !item.importedHasValidMap) {
+            const note = document.createElement("div");
+            note.className = "map-match";
+            note.textContent = "The imported report recorded a map URL, but marked the map as invalid/not usable. The URL is preserved without treating it as a valid map.";
+            body.appendChild(note);
+
+            const actionsDiv = document.createElement("div");
+            actionsDiv.className = "map-actions";
+
+            const openBtn = document.createElement("button");
+            openBtn.className = "small-btn";
+            openBtn.textContent = "↗ Open map URL";
+            openBtn.addEventListener("click", () => window.open(item.importedMapUrl, "_blank", "noopener,noreferrer"));
+            actionsDiv.appendChild(openBtn);
+            body.appendChild(actionsDiv);
+          }
+        }
+
+        if (item.commentMatch && !item.imported) {
           const match = document.createElement("div");
           match.className = "map-match";
           match.innerHTML = "<strong>Source-map comment:</strong> ";
@@ -2863,87 +3111,181 @@
       }
     }
 
+    function reportLog(...args) {
+      console.log("[Report JSON]", ...args);
+    }
+
+    function reportWarn(...args) {
+      console.warn("[Report JSON]", ...args);
+    }
+
+    function reportError(...args) {
+      console.error("[Report JSON]", ...args);
+    }
+
+    function normalizeImportedJsUrls(value) {
+      if (!Array.isArray(value)) return [];
+      return value.map(item => {
+        if (typeof item === "string") return item.trim();
+        if (!item || typeof item !== "object") return null;
+        return String(item.jsUrl || item.url || item.src || item.href || "").trim();
+      }).filter(url => /^https?:\/\//i.test(url));
+    }
+
+    function isSourceMapReport(data) {
+      return !!data && Array.isArray(data.results) && data.results.some(item =>
+        item && typeof item === "object" &&
+        ("jsUrl" in item || "hasValidMap" in item || "source" in item || "mapUrl" in item || "mapSources" in item || "error" in item)
+      );
+    }
+
+    function isJsFileListReport(data) {
+      return !!data && Array.isArray(data.jsFiles) && (
+        data.reportType === "js-file-list" || !isSourceMapReport(data)
+      );
+    }
+
+    function convertImportedResult(item, index) {
+      const jsUrl = String(item.jsUrl || item.url || item.src || "").trim();
+      const source = String(item.source || "").toLowerCase();
+      const hasValidMap = item.hasValidMap === true || item.valid === true;
+      const mapUrl = item.mapUrl || item.commentMapUrl || item.guessedUrl || null;
+      const commentValid = item.commentValid === true || source === "comment";
+      const guessValid = item.guessValid === true || source === "guessed";
+      const compressedValid = item.compressedValid === true || source === "compressed-zlib";
+
+      return {
+        jsUrl,
+        // Keep the candidate URL separate from validity/source.
+        guessUrl: item.guessedUrl || item.mapUrl || (jsUrl ? jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map") : ""),
+        commentMatch: commentValid && mapUrl ? {
+          url: mapUrl,
+          raw: mapUrl,
+          embedded: typeof mapUrl === "string" && mapUrl.startsWith("data:")
+        } : null,
+        commentValid,
+        guessValid: guessValid || (hasValidMap && source === "guessed"),
+        compressedValid,
+        compressedMapData: item.compressedMapData || null,
+        compressedInfo: item.compressedEncoding ? {
+          encoding: item.compressedEncoding,
+          encodedPayload: item.compressedPayload || null,
+          decodedText: item.decodedPayload || null,
+          decodedMap: null,
+          decodedUrls: normalizeImportedJsUrls(item.decodedUrls)
+        } : null,
+        decodedUrls: normalizeImportedJsUrls(item.decodedUrls),
+        mapSources: Number.isFinite(item.mapSources) ? item.mapSources : null,
+        mapData: item.mapData || null,
+        error: item.error || "",
+        importedHasValidMap: hasValidMap,
+        importedSource: source,
+        importedMapUrl: mapUrl
+      };
+    }
+
     function attachReportFileInput() {
       const input = document.getElementById("reportFileInput");
-      if (!input) return;
+      if (!input || input.dataset.reportHandlerAttached === "1") return;
+      input.dataset.reportHandlerAttached = "1";
 
       input.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
+        const file = e.target.files && e.target.files[0];
+        reportLog("File input change fired", { file: file ? { name: file.name, size: file.size, type: file.type } : null });
         if (!file) return;
 
         try {
           setStatus("Loading scan report JSON...");
+          reportLog("Reading file...");
+
           const text = await file.text();
-          const data = JSON.parse(text);
+          reportLog("File read successfully", { bytes: text.length, firstChars: text.slice(0, 120) });
 
-          if (!data.results && !Array.isArray(data.jsFiles)) {
-            throw new Error("Invalid report format: missing 'results' array.");
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            reportError("JSON.parse failed", parseError);
+            throw new Error(`Invalid JSON: ${parseError.message}`);
           }
 
-          if (data.scannedUrl) {
-            document.getElementById("scanUrl").value = data.scannedUrl;
+          reportLog("Parsed JSON root", {
+            type: Array.isArray(data) ? "array" : typeof data,
+            keys: data && typeof data === "object" ? Object.keys(data) : []
+          });
+
+          if (!data || typeof data !== "object" || Array.isArray(data)) {
+            throw new Error("Invalid report: root must be a JSON object.");
           }
 
-          // Reports from the JS File Scanner extension only contain a list
-          // of JS file URLs (no source-map info) — recognized either by an
-          // explicit marker or by a `jsFiles` array with no per-item map
-          // data. Route those into a real scan of that file list instead
-          // of rendering blank "no map" rows for everything.
-          const isFileListReport =
-            data.reportType === "js-file-list" ||
-            (Array.isArray(data.jsFiles) &&
-              !(data.results || []).some(r => r.source || r.commentMapUrl || r.hasValidMap));
+          const hasResults = Array.isArray(data.results);
+          const hasJsFiles = Array.isArray(data.jsFiles);
+          reportLog("Detected report fields", {
+            reportType: data.reportType,
+            hasResults,
+            resultsCount: hasResults ? data.results.length : 0,
+            hasJsFiles,
+            jsFilesCount: hasJsFiles ? data.jsFiles.length : 0,
+            scannedUrl: data.scannedUrl
+          });
 
-          if (isFileListReport) {
-            const urls = Array.isArray(data.jsFiles) && data.jsFiles.length
-              ? data.jsFiles
-              : (data.results || []).map(r => r.jsUrl).filter(Boolean);
+          if (!hasResults && !hasJsFiles) {
+            throw new Error("Unsupported report: no 'results' or 'jsFiles' array found.");
+          }
 
-            if (!urls.length) throw new Error("Report contained no JS file URLs.");
+          const scanUrl = document.getElementById("scanUrl");
+          if (scanUrl && data.scannedUrl) scanUrl.value = data.scannedUrl;
+
+          if (isJsFileListReport(data)) {
+            const urls = normalizeImportedJsUrls(data.jsFiles);
+            reportLog("Detected JS-file-list report", { validUrls: urls.length, firstUrls: urls.slice(0, 5) });
+            if (!urls.length) throw new Error("JS-file-list report contains no valid http(s) JavaScript URLs.");
 
             input.value = "";
-            setStatus(`Loaded ${urls.length} JS file URL(s) from extension report. Checking each for a source map...`);
             await runImportedFileListScan(urls, data.scannedUrl);
+            reportLog("JS-file-list import completed", { results: scanState.results.length });
             return;
           }
 
-          scanState.results = data.results.map(item => ({
-            jsUrl: item.jsUrl,
-            guessUrl: item.guessedUrl || item.jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map"),
-            commentMatch: item.commentMapUrl ? { url: item.commentMapUrl, raw: item.commentMapUrl, embedded: item.commentMapUrl.startsWith("data:") } : null,
-            commentValid: item.source === "comment",
-            guessValid: item.source === "guessed",
-            compressedValid: item.source === "compressed-zlib",
-            compressedMapData: null,
-            compressedInfo: item.compressedEncoding ? {
-              encoding: item.compressedEncoding,
-              encodedPayload: item.compressedPayload || null,
-              decodedText: item.decodedPayload || null,
-              decodedMap: null,
-              decodedUrls: item.decodedUrls || []
-            } : null,
-            decodedUrls: item.decodedUrls || [],
-            mapSources: null,
-            mapData: null,
-            error: item.error || ""
-          }));
+          if (!hasResults) throw new Error("Source-map report does not contain a results array.");
 
+          reportLog("Converting source-map results...");
+          const normalized = data.results
+            .filter(item => item && typeof item === "object")
+            .map(convertImportedResult)
+            .filter(item => item.jsUrl);
+
+          reportLog("Converted source-map results", {
+            inputCount: data.results.length,
+            outputCount: normalized.length,
+            validMaps: normalized.filter(x => x.importedHasValidMap).length,
+            comments: normalized.filter(x => x.commentValid).length,
+            guessed: normalized.filter(x => x.guessValid).length,
+            errors: normalized.filter(x => x.error).length
+          });
+
+          if (!normalized.length) throw new Error("The report results array was found, but contained no usable jsUrl values.");
+
+          scanState.results = normalized;
           renderScanResults();
           updateButtons();
 
-          const summary = data.summary || {
-            jsFiles: scanState.results.length,
-            mapComments: scanState.results.filter(x => x.commentMatch).length,
-            validMaps: scanState.results.filter(x => x.commentValid || x.guessValid).length,
-            fetchFailures: scanState.results.filter(x => x.error && !x.commentMatch).length
-          };
+          const rawSummary = data.summary && typeof data.summary === "object" ? data.summary : {};
+          updateScanSummary(
+            Number.isFinite(rawSummary.jsFiles) ? rawSummary.jsFiles : normalized.length,
+            Number.isFinite(rawSummary.mapComments) ? rawSummary.mapComments : normalized.filter(x => x.commentValid).length,
+            Number.isFinite(rawSummary.validMaps) ? rawSummary.validMaps : normalized.filter(x => x.importedHasValidMap || x.commentValid || x.guessValid || x.compressedValid).length,
+            Number.isFinite(rawSummary.fetchFailures) ? rawSummary.fetchFailures : normalized.filter(x => x.error).length
+          );
 
-          updateScanSummary(summary.jsFiles, summary.mapComments, summary.validMaps, summary.fetchFailures);
+          input.value = "";
           setStatus(`Successfully loaded report from ${file.name}`);
-
+          reportLog("Source-map report import completed successfully.");
         } catch (err) {
-          console.error(err);
-          setStatus("Failed to load report: " + err.message);
+          reportError("IMPORT FAILED", err);
+          reportError("Failure details", { name: err.name, message: err.message, stack: err.stack });
+          setStatus("Failed to load report: " + (err.message || err));
+          input.value = "";
         }
       });
     }
