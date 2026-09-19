@@ -1,0 +1,3314 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="https://jsmaps.github.io/favicon.svg">
+    <title>JS Source Map Viewer & Scanner</title>
+
+    <meta name="description" content="JS Source Map Viewer and source map scanner. Find JavaScript source maps, view mapped source data, and download source map results.">
+    <meta name="keywords" content="JavaScript source map viewer, source map scanner, JS source maps, JavaScript source maps, source map viewer, source map visualization, source map data">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://jsmaps.github.io/">
+
+    <meta property="og:title" content="JS Source Map Viewer & Scanner">
+    <meta property="og:description" content="Find, inspect, and download JavaScript source maps and their mapped source files.">
+    <meta property="og:url" content="https://jsmaps.github.io/">
+    <meta property="og:type" content="website">
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="JS Source Map Viewer & Scanner">
+    <meta name="twitter:description" content="Find, inspect, and download JavaScript source maps and mapped source files.">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: #111827;
+      --bg-card-hover: #1f293d;
+      --border-color: #1f2937;
+      --border-focus: #3b82f6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --secondary: #374151;
+      --secondary-hover: #4b5563;
+      --accent-blue: #60a5fa;
+      --radius: 8px
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column
+    }
+
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(17, 24, 39, .8);
+      backdrop-filter: blur(12px)
+    }
+
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      color: #fff
+    }
+
+    header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px
+    }
+
+    .container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px;
+      flex: 1;
+      display: flex;
+      flex-direction: column
+    }
+
+    .upload-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px
+    }
+
+    .drop-box {
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: all .2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center
+    }
+
+    .drop-box:hover {
+      border-color: var(--accent-blue);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px)
+    }
+
+    .drop-box strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff
+    }
+
+    .drop-box span {
+      color: var(--text-muted);
+      font-size: 13px
+    }
+
+    input[type=file] {
+      display: none
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 18px
+    }
+
+    .zip-export-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 3px;
+      border-radius: var(--radius)
+    }
+
+    .zip-input {
+      background: 0 0;
+      border: none;
+      color: var(--text-main);
+      padding: 6px 10px;
+      font-size: 13px;
+      outline: 0;
+      width: 180px
+    }
+
+    .zip-input::placeholder {
+      color: var(--text-muted)
+    }
+
+    button {
+      border: 0;
+      border-radius: var(--radius);
+      padding: 10px 18px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all .15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .2)
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px)
+    }
+
+    button.secondary {
+      background: var(--secondary)
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: var(--secondary-hover)
+    }
+
+    button.warning {
+      background: #d97706;
+    }
+
+    button.warning:hover:not(:disabled) {
+      background: #b45309;
+      transform: translateY(-1px);
+    }
+
+    button.small-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 4px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button.small-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    button:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      box-shadow: none
+    }
+
+    .status {
+      padding: 12px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      color: var(--text-muted);
+      font-size: 13.5px;
+      display: flex;
+      align-items: center
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: 650px;
+      min-height: 0;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #0d1322;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .3)
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-card);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0
+    }
+
+    .sidebar-title {
+      padding: 16px 18px;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0
+    }
+
+    .file-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex: 1;
+      min-height: 0;
+      max-height: 100%
+    }
+
+    .file-item {
+      padding: 10px 18px;
+      border-bottom: 1px solid rgba(31, 41, 55, .5);
+      cursor: pointer;
+      font-size: 13px;
+      word-break: break-all;
+      color: var(--text-main);
+      transition: background .15s ease
+    }
+
+    .file-item:hover {
+      background: var(--bg-card-hover)
+    }
+
+    .file-item.active {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 500
+    }
+
+    .viewer {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      background: #090d16
+    }
+
+    .viewer-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px
+    }
+
+    .filename {
+      font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--accent-blue)
+    }
+
+    pre {
+      margin: 0;
+      padding: 20px;
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
+      overflow: auto;
+      white-space: pre;
+      font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      background: #090d16
+    }
+
+    .empty {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4b5563;
+      text-align: center;
+      padding: 40px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--secondary);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-main)
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--secondary);
+      border-radius: 4px
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--secondary-hover)
+    }
+
+    /* Auto Scan Styling & Smooth Collapsible Container */
+    .auto-scan {
+      background: linear-gradient(180deg, rgba(17,24,39,.98), rgba(13,19,34,.98));
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.18);
+    }
+
+    .auto-scan-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    .auto-scan-head h2 {
+      margin: 0 0 5px;
+      font-size: 17px;
+      color: #fff;
+    }
+
+    .auto-scan-head p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .toggle-scanner-btn {
+      background: transparent;
+      box-shadow: none;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toggle-scanner-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+    }
+
+    .toggle-icon {
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+
+    .auto-scan-body-wrapper {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 0.35s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.35s ease;
+      margin-top: 16px;
+      opacity: 1;
+    }
+
+    .auto-scan-body {
+      overflow: hidden;
+    }
+
+    .auto-scan.collapsed .auto-scan-body-wrapper {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      margin-top: 0;
+    }
+
+    .auto-scan.collapsed .toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .auto-scan code {
+      color: var(--accent-blue);
+    }
+
+    .scan-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .scan-url {
+      flex: 1;
+      min-width: 0;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      color: var(--text-main);
+      padding: 10px 13px;
+      outline: none;
+      font-size: 13px;
+    }
+
+    .scan-url:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px rgba(59,130,246,.12);
+    }
+
+    .scan-options {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .scan-option-card {
+      display: inline-flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(17, 24, 39, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .scan-option-card:hover {
+      background: var(--bg-card-hover);
+      border-color: #374151;
+    }
+
+    .scan-option-card:has(input[type="checkbox"]:checked) {
+      background: rgba(37, 99, 235, 0.08);
+      border-color: rgba(96, 165, 250, 0.4);
+    }
+
+    .scan-option-card input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid #4b5563;
+      border-radius: 4px;
+      background: #090d16;
+      cursor: pointer;
+      margin-top: 2px;
+      flex-shrink: 0;
+      display: grid;
+      place-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .scan-option-card input[type="checkbox"]:checked {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .scan-option-card input[type="checkbox"]:checked::before {
+      content: "";
+      width: 8px;
+      height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: rotate(-45deg) translate(0.5px, -0.5px);
+    }
+
+    .option-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .option-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    .scan-option-card:has(input[type="checkbox"]:checked) .option-title {
+      color: #93c5fd;
+    }
+
+    .option-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .scan-progress {
+      margin-top: 14px;
+      padding: 9px 12px;
+      border-radius: 6px;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 12px;
+      min-height: 36px;
+    }
+
+    .scan-summary {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .scan-stat {
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-card);
+    }
+
+    .scan-stat b {
+      display: block;
+      font-size: 18px;
+      color: #fff;
+    }
+
+    .scan-stat span {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .map-results {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .scan-empty {
+      padding: 25px;
+      text-align: center;
+      color: #4b5563;
+      border: 1px dashed var(--border-color);
+      border-radius: 7px;
+    }
+
+    .upload-link, .clear-link {
+      color: var(--accent-blue);
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 500;
+      transition: color 0.15s ease;
+    }
+
+    .upload-link:hover, .clear-link:hover {
+      color: #93c5fd;
+    }
+
+    .clear-results-container {
+      margin-top: 12px;
+      text-align: right;
+    }
+
+    .map-result {
+      border: 1px solid var(--border-color);
+      border-radius: 7px;
+      background: #0d1322;
+      flex-shrink: 0;
+    }
+
+    .map-result.good {
+      border-color: rgba(37,99,235,.5);
+    }
+
+    .map-result-head {
+      padding: 11px 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .map-result-title {
+      min-width: 0;
+      font-family: SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace;
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .map-result-title a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    .map-result-title a:hover {
+      text-decoration: underline;
+    }
+
+    .map-badge {
+      flex-shrink: 0;
+      padding: 3px 7px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--secondary);
+      color: var(--text-muted);
+    }
+
+    .map-badge.found {
+      background: rgba(37,99,235,.2);
+      color: #93c5fd;
+    }
+
+    .map-result-body {
+      padding: 10px 13px;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .map-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .map-match {
+      margin-top: 7px;
+      padding: 7px 9px;
+      border-left: 2px solid var(--accent-blue);
+      background: rgba(37,99,235,.07);
+      word-break: break-all;
+    }
+
+    .map-match strong {
+      color: #dbeafe;
+    }
+
+    .map-error {
+      color: #fca5a5;
+    }
+
+    /* URL Rewrite Rules */
+    .rewrite-rules {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+    .rewrite-rules-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .rewrite-rules-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .rewrite-rule-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .rewrite-rule {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+    }
+    .rewrite-rule.disabled { opacity: .5; }
+    .rewrite-rule-toggle {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .rewrite-rule-info { min-width: 0; }
+    .rewrite-rule-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rewrite-rule-code {
+      margin-top: 2px;
+      color: var(--text-muted);
+      font: 10px/1.4 SFMono-Regular, Consolas, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rewrite-rule-remove {
+      padding: 5px 8px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: #fca5a5;
+      font-size: 11px;
+    }
+    .rewrite-rule-remove:hover:not(:disabled) {
+      background: rgba(220,38,38,.12);
+      border-color: rgba(220,38,38,.4);
+    }
+    .rewrite-rules-empty {
+      color: #4b5563;
+      font-size: 11px;
+      padding: 5px 0;
+    }
+    @media (max-width:800px) {
+      .scan-controls {
+        flex-direction: column;
+      }
+      .scan-summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .upload-area {
+        grid-template-columns: 1fr
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+        height: auto
+      }
+
+      .sidebar {
+        height: 250px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border-color)
+      }
+
+      .viewer {
+        min-height: 400px
+      }
+    }
+    /* Regex Builder modal */
+    .rb-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 6, 12, .72);
+      backdrop-filter: blur(2px);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px
+    }
+
+    .rb-overlay.rb-open {
+      display: flex
+    }
+
+    .rb-modal {
+      width: 100%;
+      max-width: 640px;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .5)
+    }
+
+    .rb-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      background: var(--bg-card);
+      z-index: 1
+    }
+
+    .rb-header h2 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .rb-step-dots {
+      display: flex;
+      gap: 6px
+    }
+
+    .rb-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--border-color);
+      transition: background .15s ease, transform .15s ease
+    }
+
+    .rb-dot.rb-dot-active {
+      background: var(--primary);
+      transform: scale(1.2)
+    }
+
+    .rb-dot.rb-dot-done {
+      background: var(--accent-blue)
+    }
+
+    .rb-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px
+    }
+
+    .rb-close:hover {
+      color: #fff;
+      background: var(--bg-card-hover)
+    }
+
+    .rb-body {
+      padding: 18px 20px;
+      min-height: 220px
+    }
+
+    .rb-step-title {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      text-transform: uppercase;
+      letter-spacing: .03em
+    }
+
+    .rb-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px
+    }
+
+    .rb-select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 12px;
+      margin-bottom: 6px
+    }
+
+    .rb-empty {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin: 0 0 10px
+    }
+
+    .rb-instructions {
+      color: var(--text-muted);
+      font-size: 12.5px;
+      line-height: 1.5;
+      margin: 10px 0
+    }
+
+    .rb-url-display {
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      word-break: break-all;
+      user-select: text;
+      cursor: text;
+      color: var(--text-main)
+    }
+
+    .rb-url-display .rb-removed {
+      color: #fca5a5;
+      background: rgba(220, 38, 38, .18);
+      text-decoration: line-through;
+      border-radius: 3px
+    }
+
+    .rb-url-display .rb-replaced {
+      color: #93c5fd;
+      background: rgba(37, 99, 235, .18);
+      border-radius: 3px
+    }
+
+    .rb-url-display .rb-replaced::after {
+      content: attr(data-rb-with);
+      color: #fbbf24;
+      background: rgba(217, 119, 6, .2);
+      border-radius: 3px;
+      padding: 0 3px;
+      margin-left: 2px
+    }
+
+    .rb-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px
+    }
+
+    .rb-replace-input {
+      flex: 1 1 160px;
+      padding: 6px 10px;
+      font-family: monospace;
+      font-size: 12px
+    }
+
+    .rb-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .rb-preview-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px
+    }
+
+    .rb-preview-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .03em
+    }
+
+    .rb-preview-value {
+      display: block;
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12.5px;
+      word-break: break-all;
+      color: #a7f3d0
+    }
+
+    .rb-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-color);
+      position: sticky;
+      bottom: 0;
+      background: var(--bg-card)
+    }
+
+    .rb-footer .rb-apply {
+      margin-left: auto
+    }
+
+    .rb-apply {
+      background: var(--primary)
+    }
+
+    .rb-apply:hover:not(:disabled) {
+      background: var(--primary-hover)
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>JS Source Map Viewer</h1>
+    <p>Load a JavaScript bundle and its source map to inspect and export mapped source files.</p>
+  </header>
+  <div class="container">
+
+    <section id="autoScanSection" class="auto-scan">
+      <div class="auto-scan-head">
+        <div>
+          <h2>🔎 Automatic Source Map Scanner</h2>
+          <p>Enter a page URL. The scanner discovers JavaScript files, checks each <code>.js.map</code>, and looks for source-map comments inside the JavaScript.</p>
+        </div>
+        <button id="toggleScannerBtn" class="toggle-scanner-btn">
+          <span class="toggle-icon">▼</span>
+          <span id="toggleScannerText">Collapse</span>
+        </button>
+      </div>
+
+      <div class="auto-scan-body-wrapper">
+        <div class="auto-scan-body">
+          <div class="scan-controls">
+            <input id="scanUrl" class="scan-url" type="url" placeholder="https://example.com/" autocomplete="off">
+            <button id="scanBtn">Scan Site</button>
+            <button id="stopScanBtn" class="secondary" disabled="">Stop</button>
+            <button id="saveReportBtn" class="warning" disabled="">Save Report</button>
+          </div>
+
+          <div class="scan-options">
+            <label class="scan-option-card">
+              <input id="sameOriginOnly" type="checkbox">
+              <div class="option-content">
+                <span class="option-title">Same-origin JS only</span>
+                <span class="option-desc">Restrict map searches to scripts hosted on the primary domain.</span>
+              </div>
+            </label>
+
+            <label class="scan-option-card">
+              <input id="scanInline" type="checkbox" checked="">
+              <div class="option-content">
+                <span class="option-title">Scan inline scripts</span>
+                <span class="option-desc">Check embedded <code>&lt;script&gt;</code> blocks inside HTML responses.</span>
+              </div>
+            </label>
+
+            <label class="scan-option-card">
+              <input id="deepBrowserScan" type="checkbox">
+              <div class="option-content">
+                <span class="option-title">🌐 Deep browser scan</span>
+                <span class="option-desc">Loads the page in a real browser to discover dynamically loaded JS. Slower.</span>
+              </div>
+            </label>
+
+            <!-- Regex URL Rewriter -->
+            <div class="scan-option-card" style="flex: 1 1 100%; cursor: default;">
+              <div class="option-content" style="width: 100%;">
+                <span class="option-title">URL Rewrite (Regex)</span>
+                <span class="option-desc">Rewrite discovered JS & .map URLs before requesting them (e.g. bypass CDN subdomains).</span>
+                <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                  <input id="regexRuleName" class="scan-url" style="padding: 6px 10px; font-size: 12px; flex: 0 1 180px;" placeholder="Rule name (optional)">
+                  <input id="regexPattern" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Match Pattern">
+                  <input id="regexReplacement" class="scan-url" style="padding: 6px 10px; font-family: monospace; font-size: 12px;" placeholder="Replacement (e.g. $1)">
+                </div>
+                <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button type="button" id="addRegexRuleBtn" class="small-btn">＋ Add Rule</button>
+                  <button type="button" id="openRegexBuilderBtn" class="secondary small-btn">🛠 Build Rule From a Failed URL</button>
+                </div>
+                <div class="rewrite-rules">
+                  <div class="rewrite-rules-head">
+                    <span class="rewrite-rules-title">Saved Rewrite Rules</span>
+                    <span id="rewriteRuleCount" class="badge">0</span>
+                  </div>
+                  <div id="rewriteRuleList" class="rewrite-rule-list"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="scanProgress" class="scan-progress">
+            <span id="scanProgressText">Ready to scan.</span>
+          </div>
+
+          <div class="scan-summary" id="scanSummary" hidden=""></div>
+          
+          <div id="clearContainer" class="clear-results-container" hidden="">
+            <span id="clearResultsBtn" class="clear-link">Clear Results</span>
+          </div>
+
+          <div class="map-results" id="mapResults">
+          <div class="scan-empty">
+            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON (site report, or a JS-file list from the extension)<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="upload-area">
+      <label class="drop-box">
+        <input id="jsFile" accept=".js,.mjs,.cjs,text/javascript" type="file">
+        <strong>📄 Select JavaScript</strong>
+        <span id="jsName">Choose a .js file</span>
+      </label>
+      <label class="drop-box">
+        <input id="mapFile" accept=".map,application/json" type="file">
+        <strong>🗺️ Select Source Map</strong>
+        <span id="mapName">Choose a .js.map file</span>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="loadBtn">Load Source Map</button>
+      <button id="downloadJsBtn" disabled="" class="secondary">Download JS</button>
+      <button id="downloadMapBtn" disabled="" class="secondary">Download .map</button>
+      
+      <div class="zip-export-group">
+        <input id="zipNameInput" class="zip-input" disabled="" placeholder="Name?">
+        <button id="zipBtn" disabled="">Download Custom ZIP</button>
+        <button id="downloadAllZipBtn" class="warning" disabled="">Download All to ZIP</button>
+      </div>
+    </div>
+
+    <div class="status" id="status">Scan results cleared.</div>
+
+    <div class="layout" id="viewerSection">
+      <aside class="sidebar">
+        <div class="sidebar-title">Mapped Sources <span id="count" class="badge">0</span></div>
+        <ul class="file-list" id="fileList"></ul>
+      </aside>
+      <main class="viewer">
+        <div class="viewer-header">
+          <div class="filename" id="currentFile">No file selected</div>
+          <button id="downloadCurrentBtn" disabled="">Download Current</button>
+        </div>
+        <pre id="code"><div class="empty">Select a source from the list to view it.</div></pre>
+      </main>
+    </div>
+  </div>
+
+  <div id="regexBuilderOverlay" class="rb-overlay">
+    <div class="rb-modal" role="dialog" aria-modal="true" aria-labelledby="rbTitle">
+      <div class="rb-header">
+        <div>
+          <h2 id="rbTitle">Build a URL Rewrite Rule</h2>
+          <div class="rb-step-dots" id="rbStepDots">
+            <span class="rb-dot" data-dot="1"></span>
+            <span class="rb-dot" data-dot="2"></span>
+            <span class="rb-dot" data-dot="3"></span>
+          </div>
+        </div>
+        <button type="button" id="rbCloseBtn" class="rb-close" aria-label="Close">×</button>
+      </div>
+
+      <div class="rb-body">
+        <!-- Step 1: pick a URL -->
+        <div class="rb-step" id="rbStep1" data-step="1">
+          <p class="rb-step-title">Step 1 — Pick a failed URL</p>
+          <label class="rb-label" for="rbUrlSelect">Which URL do you want to fix?</label>
+          <select id="rbUrlSelect" class="rb-select"></select>
+          <p id="rbEmptyState" class="rb-empty" hidden="">
+            No failed URLs yet — run a scan first, or pick any URL below once one shows up.
+          </p>
+          <p class="rb-instructions">
+            We'll use this one URL as an example to build a rule that can apply to every file on the same host.
+          </p>
+        </div>
+
+        <!-- Step 2: mark edits -->
+        <div class="rb-step" id="rbStep2" data-step="2" hidden="">
+          <p class="rb-step-title">Step 2 — Select the part(s) to fix</p>
+          <p class="rb-instructions">
+            Drag to select part of the URL below, then click <strong>Remove Selected</strong> or type a replacement and
+            click <strong>Replace Selected</strong>. You can make more than one edit.
+          </p>
+
+          <div id="rbUrlDisplay" class="rb-url-display"></div>
+
+          <div class="rb-actions">
+            <button type="button" id="rbRemoveBtn" class="secondary small-btn">Remove Selected</button>
+            <input type="text" id="rbReplaceInput" class="scan-url rb-replace-input" placeholder="Replace with…">
+            <button type="button" id="rbReplaceBtn" class="secondary small-btn">Replace Selected</button>
+          </div>
+          <div class="rb-actions">
+            <button type="button" id="rbUndoBtn" class="secondary small-btn">Undo Last Edit</button>
+            <button type="button" id="rbResetBtn" class="secondary small-btn">Reset</button>
+          </div>
+        </div>
+
+        <!-- Step 3: preview & confirm -->
+        <div class="rb-step" id="rbStep3" data-step="3" hidden="">
+          <p class="rb-step-title">Step 3 — Review & confirm</p>
+          <div class="rb-preview">
+            <div class="rb-preview-row">
+              <span class="rb-preview-label">Preview result</span>
+              <code id="rbPreviewResult" class="rb-preview-value">—</code>
+            </div>
+            <div class="rb-preview-row">
+              <span class="rb-preview-label">Pattern</span>
+              <code id="rbPreviewPattern" class="rb-preview-value">—</code>
+            </div>
+            <div class="rb-preview-row">
+              <span class="rb-preview-label">Replacement</span>
+              <code id="rbPreviewReplacement" class="rb-preview-value">—</code>
+            </div>
+          </div>
+          <p class="rb-instructions">
+            This replaces whatever is currently in the URL Rewrite fields. You can still tweak it there afterward.
+          </p>
+        </div>
+      </div>
+
+      <div class="rb-footer">
+        <button type="button" id="rbBackBtn" class="secondary" hidden="">Back</button>
+        <button type="button" id="rbNextBtn" class="rb-apply" disabled="">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let jsFile = null,
+      mapFile = null,
+      mapData = null,
+      sources = [],
+      currentSource = null;
+
+    function renderFileList() {
+      const o = document.getElementById("fileList");
+      o.innerHTML = "";
+      document.getElementById("count").textContent = sources.length;
+      
+      sources.forEach((e, t) => {
+        const n = document.createElement("li");
+        n.className = "file-item";
+        n.textContent = e.name;
+        if (null === e.content) {
+          n.title = "This source map does not contain sourcesContent for this file.";
+          n.style.opacity = "0.55";
+        }
+        n.addEventListener("click", () => {
+          document.querySelectorAll(".file-item").forEach(item => item.classList.remove("active"));
+          n.classList.add("active");
+          showSource(t);
+        });
+        o.appendChild(n);
+      });
+    }
+
+    function showSource(e) {
+      e = sources[e];
+      if (!e) return;
+      currentSource = e;
+      document.getElementById("currentFile").textContent = e.name;
+      const t = document.getElementById("code");
+      if (null === e.content) {
+        t.textContent = "No embedded sourceContent exists for this file.\n\nThe source map only references this source:\n" + e.name;
+        document.getElementById("downloadCurrentBtn").disabled = true;
+        return;
+      }
+      t.textContent = e.content;
+      document.getElementById("downloadCurrentBtn").disabled = false;
+    }
+
+    function flattenSourceMap(map) {
+      const result = [];
+
+      function addNormalMap(m, sectionIndex = null) {
+        if (!m || !Array.isArray(m.sources)) return;
+
+        const contents = Array.isArray(m.sourcesContent)
+          ? m.sourcesContent
+          : [];
+
+        for (let i = 0; i < m.sources.length; i++) {
+          result.push({
+            name: m.sources[i] || `source-${result.length + 1}.txt`,
+            content:
+              contents[i] !== undefined && contents[i] !== null
+                ? contents[i]
+                : null,
+            section: sectionIndex
+          });
+        }
+      }
+
+      if (Array.isArray(map?.sources)) {
+        addNormalMap(map);
+      }
+
+      if (Array.isArray(map?.sections)) {
+        for (let i = 0; i < map.sections.length; i++) {
+          const section = map.sections[i];
+
+          if (!section?.map) continue;
+
+          if (Array.isArray(section.map.sections)) {
+            const nested = flattenSourceMap(section.map);
+            nested.forEach(item => {
+              result.push({
+                ...item,
+                section: i
+              });
+            });
+          } else {
+            addNormalMap(section.map, i);
+          }
+        }
+      }
+
+      return result;
+    }
+
+    function getMapSourceCount(map) {
+      return flattenSourceMap(map).length;
+    }
+
+    function parseAndLoadMapData(jsonObj, mapName = "scanned.map") {
+      mapData = jsonObj;
+
+      const isStandardMap = Array.isArray(mapData?.sources);
+      const isIndexedMap = Array.isArray(mapData?.sections);
+
+      if (!isStandardMap && !isIndexedMap) {
+        throw new Error("This does not appear to be a valid Source Map.");
+      }
+
+      sources = flattenSourceMap(mapData);
+
+      renderFileList();
+
+      if (sources.length > 0) {
+        const firstValidIndex = sources.findIndex(s => s.content !== null);
+        showSource(firstValidIndex >= 0 ? firstValidIndex : 0);
+
+        const firstItem =
+          document.querySelectorAll(".file-item")[
+            firstValidIndex >= 0 ? firstValidIndex : 0
+          ];
+
+        if (firstItem) firstItem.classList.add("active");
+      }
+
+      const embeddedCount =
+        sources.filter(e => e.content !== null).length;
+
+      const mapType =
+        isIndexedMap && !isStandardMap ? "indexed" : "standard";
+
+      setStatus(
+        `Loaded ${sources.length} mapped sources from ${mapName} ` +
+        `(${mapType} map). ${embeddedCount} contain embedded source code.`
+      );
+
+      updateButtons();
+
+      document.getElementById("viewerSection").scrollIntoView({
+        behavior: "smooth"
+      });
+    }
+
+    function downloadBlob(blob, filename) {
+      if (!blob) return;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = cleanFilename(filename);
+      a.rel = "noopener";
+      a.style.display = "none";
+
+      document.body.appendChild(a);
+
+      try {
+        a.click();
+      } catch (_) {
+        a.dispatchEvent(new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        }));
+      }
+
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+
+    function cleanFilename(e) {
+      if (!e) return "source.txt";
+
+      let t = String(e)
+        .replace(/^webpack:\/\/\/?/, "")
+        .replace(/^webpack:\/\//, "")
+        .replace(/^file:\/\/\/?/, "")
+        .replace(/^\/+/, "")
+        .replace(/\.\.(\/|\\)/g, "");
+
+      t = t.split(/[\\/]/).pop();
+      
+      if (!t.endsWith(".json")) {
+        t = t.split(/[?#]/)[0];
+      }
+
+      t = t.replace(/[<>:"|?*\x00-\x1F]/g, "_").trim();
+
+      return t || "source.txt";
+    }
+
+    function updateButtons() {
+      document.getElementById("downloadJsBtn").disabled = !jsFile;
+      document.getElementById("downloadMapBtn").disabled = !mapFile && !mapData;
+
+      const hasSources = sources.length > 0;
+      const hasScanResults = scanState.results.length > 0;
+
+      document.getElementById("downloadAllZipBtn").disabled = !hasScanResults;
+      document.getElementById("saveReportBtn").disabled = !hasScanResults;
+      document.getElementById("zipBtn").disabled = !hasSources;
+      document.getElementById("zipNameInput").disabled = !hasSources;
+    }
+
+    function setStatus(e) {
+      document.getElementById("status").textContent = e;
+    }
+
+    const REWRITE_RULES_KEY = "jsmaps-url-rewrite-rules-v1";
+    let rewriteRules = loadRewriteRules();
+
+    function loadRewriteRules() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(REWRITE_RULES_KEY) || "[]");
+        return Array.isArray(saved) ? saved.filter(r => r && r.pattern) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveRewriteRules() {
+      try {
+        localStorage.setItem(REWRITE_RULES_KEY, JSON.stringify(rewriteRules));
+      } catch (_) {}
+    }
+
+    function applyUrlRewrite(url) {
+      if (!url) return url;
+      let rewritten = url;
+
+      for (const rule of rewriteRules) {
+        if (!rule.enabled) continue;
+        try {
+          rewritten = rewritten.replace(new RegExp(rule.pattern, "g"), rule.replacement || "");
+        } catch (err) {
+          console.warn(`Invalid rewrite regex in rule "${rule.name || rule.pattern}":`, err);
+        }
+      }
+
+      return rewritten;
+    }
+
+    function renderRewriteRules() {
+      const list = $("rewriteRuleList");
+      if (!list) return;
+      list.innerHTML = "";
+      $("rewriteRuleCount").textContent = rewriteRules.length;
+
+      if (!rewriteRules.length) {
+        list.innerHTML = '<div class="rewrite-rules-empty">No saved rules. Add one above.</div>';
+        return;
+      }
+
+      rewriteRules.forEach((rule, index) => {
+        const row = document.createElement("div");
+        row.className = `rewrite-rule${rule.enabled ? "" : " disabled"}`;
+
+        const toggle = document.createElement("input");
+        toggle.type = "checkbox";
+        toggle.className = "rewrite-rule-toggle";
+        toggle.checked = rule.enabled !== false;
+        toggle.title = "Enable or disable this rule";
+        toggle.addEventListener("change", () => {
+          rewriteRules[index].enabled = toggle.checked;
+          saveRewriteRules();
+          renderRewriteRules();
+        });
+
+        const info = document.createElement("div");
+        info.className = "rewrite-rule-info";
+        const name = document.createElement("div");
+        name.className = "rewrite-rule-name";
+        name.textContent = rule.name || `Rule ${index + 1}`;
+        const code = document.createElement("div");
+        code.className = "rewrite-rule-code";
+        code.textContent = `/${rule.pattern}/g → ${rule.replacement || "∅"}`;
+        info.append(name, code);
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "rewrite-rule-remove";
+        remove.textContent = "Remove";
+        remove.addEventListener("click", () => {
+          rewriteRules.splice(index, 1);
+          saveRewriteRules();
+          renderRewriteRules();
+          setStatus(`Removed rewrite rule: ${rule.name || `Rule ${index + 1}`}`);
+        });
+
+        row.append(toggle, info, remove);
+        list.appendChild(row);
+      });
+    }
+
+    function addRewriteRule(pattern, replacement, name = "") {
+      pattern = String(pattern || "").trim();
+      replacement = String(replacement || "");
+      name = String(name || "").trim();
+      if (!pattern) {
+        setStatus("Enter a regex pattern before adding a rule.");
+        return false;
+      }
+
+      try {
+        new RegExp(pattern, "g");
+      } catch (err) {
+        setStatus(`Invalid regex: ${err.message}`);
+        return false;
+      }
+
+      if (rewriteRules.some(r => r.pattern === pattern && r.replacement === replacement)) {
+        setStatus("That rewrite rule is already saved.");
+        return false;
+      }
+
+      rewriteRules.push({
+        id: `rule_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        name: name || `Rule ${rewriteRules.length + 1}`,
+        pattern,
+        replacement,
+        enabled: true
+      });
+      saveRewriteRules();
+      renderRewriteRules();
+      setStatus(`Added rewrite rule: ${name || `Rule ${rewriteRules.length}`}`);
+      return true;
+    }
+
+    // ---------------------------------------------------------------
+    // Regex Builder: pick a failed URL, select parts of it with the
+    // mouse, mark them "remove" or "replace with X", and it generates
+    // a pattern/replacement pair for the URL Rewrite fields above.
+    //
+    // How it turns edits into one regex: everything before the first
+    // edit and any untouched text between edits is matched/reproduced
+    // literally. Whatever's left AFTER the last edit is captured as a
+    // wildcard ( (.*)$ ) and echoed back via $1 — so the rule keeps
+    // working across every filename/hash on that host, not just the
+    // one example URL it was built from.
+    // ---------------------------------------------------------------
+
+    function escapeRegExp(str) {
+      return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    const rbState = {
+      url: "",
+      edits: [] // { start, end, type: "remove" | "replace", text: "" }
+    };
+
+    function rbEscapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function rbBuildRule() {
+      const url = rbState.url;
+      const edits = [...rbState.edits].sort((a, b) => a.start - b.start);
+
+      if (!url) return null;
+
+      if (!edits.length) {
+        return {
+          pattern: "^" + escapeRegExp(url) + "$",
+          replacement: url,
+          preview: url
+        };
+      }
+
+      let patternParts = ["^"];
+      let replacementParts = [];
+      let cursor = 0;
+
+      for (const edit of edits) {
+        const gap = url.slice(cursor, edit.start);
+        patternParts.push(escapeRegExp(gap));
+        replacementParts.push(gap);
+
+        const original = url.slice(edit.start, edit.end);
+        patternParts.push(escapeRegExp(original));
+        replacementParts.push(edit.type === "remove" ? "" : edit.text);
+
+        cursor = edit.end;
+      }
+
+      const suffix = url.slice(cursor);
+      patternParts.push("(.*)$");
+      replacementParts.push("$1");
+
+      const pattern = patternParts.join("");
+      const replacement = replacementParts.join("");
+
+      let preview = url;
+      try {
+        preview = url.replace(new RegExp(pattern, "g"), replacement);
+      } catch (_) {
+        /* shown as the raw pattern below instead */
+      }
+
+      return { pattern, replacement, preview };
+    }
+
+    function rbRender() {
+      const display = document.getElementById("rbUrlDisplay");
+      const url = rbState.url;
+      const edits = [...rbState.edits].sort((a, b) => a.start - b.start);
+
+      if (!url) {
+        display.innerHTML = "";
+      } else if (!edits.length) {
+        display.textContent = url;
+      } else {
+        let html = "";
+        let cursor = 0;
+
+        for (const edit of edits) {
+          html += rbEscapeHtml(url.slice(cursor, edit.start));
+          const original = rbEscapeHtml(url.slice(edit.start, edit.end));
+
+          if (edit.type === "remove") {
+            html += `<span class="rb-removed">${original}</span>`;
+          } else {
+            html += `<span class="rb-replaced" data-rb-with="${rbEscapeHtml(edit.text)}">${original}</span>`;
+          }
+
+          cursor = edit.end;
+        }
+
+        html += rbEscapeHtml(url.slice(cursor));
+        display.innerHTML = html;
+      }
+
+      const rule = rbBuildRule();
+
+      document.getElementById("rbPreviewResult").textContent = rule ? rule.preview : "\u2014";
+      document.getElementById("rbPreviewPattern").textContent = rule ? rule.pattern : "\u2014";
+      document.getElementById("rbPreviewReplacement").textContent = rule ? rule.replacement : "\u2014";
+      document.getElementById("rbUndoBtn").disabled = !edits.length;
+
+      rbUpdateFooter();
+    }
+
+    function rbGetSelectionRange() {
+      const display = document.getElementById("rbUrlDisplay");
+      const sel = window.getSelection();
+
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+
+      const range = sel.getRangeAt(0);
+      if (!display.contains(range.commonAncestorContainer)) return null;
+
+      // Measure the selection's offsets against the plain-text URL by
+      // walking a cloned range from the display's start to each boundary.
+      const preStart = document.createRange();
+      preStart.selectNodeContents(display);
+      preStart.setEnd(range.startContainer, range.startOffset);
+      const start = preStart.toString().length;
+
+      const preEnd = document.createRange();
+      preEnd.selectNodeContents(display);
+      preEnd.setEnd(range.endContainer, range.endOffset);
+      const end = preEnd.toString().length;
+
+      if (end <= start) return null;
+
+      // Reject a selection that overlaps an edit already made.
+      const overlaps = rbState.edits.some(e => start < e.end && end > e.start);
+      if (overlaps) {
+        setStatus("That selection overlaps an existing edit — undo it first or select a different part.");
+        return null;
+      }
+
+      return { start, end };
+    }
+
+    function rbPopulateUrlSelect() {
+      const select = document.getElementById("rbUrlSelect");
+      const emptyState = document.getElementById("rbEmptyState");
+      select.innerHTML = "";
+
+      const failed = scanState.results.filter(r => r.jsUrl && r.error);
+      const list = failed.length
+        ? failed
+        : scanState.results.filter(r => r.jsUrl && !r.jsUrl.includes("#inline-script-"));
+
+      emptyState.hidden = failed.length > 0;
+
+      if (!list.length) {
+        const opt = document.createElement("option");
+        opt.textContent = "No scanned URLs yet";
+        opt.disabled = true;
+        select.appendChild(opt);
+        return;
+      }
+
+      for (const item of list) {
+        const opt = document.createElement("option");
+        opt.value = item.jsUrl;
+        const errPart = item.error ? ` \u2014 ${item.error}` : "";
+        opt.textContent = item.jsUrl + errPart;
+        select.appendChild(opt);
+      }
+    }
+
+    // --- Step wizard navigation ---
+    // rbState.step: 1 = pick a URL, 2 = mark edits, 3 = review & confirm.
+    rbState.step = 1;
+    const RB_TOTAL_STEPS = 3;
+
+    function rbUpdateFooter() {
+      const backBtn = document.getElementById("rbBackBtn");
+      const nextBtn = document.getElementById("rbNextBtn");
+
+      backBtn.hidden = rbState.step === 1;
+
+      if (rbState.step === RB_TOTAL_STEPS) {
+        nextBtn.textContent = "Use This Rule";
+        nextBtn.disabled = !rbState.url || rbState.edits.length === 0;
+      } else {
+        nextBtn.textContent = "Next";
+        nextBtn.disabled = rbState.step === 1 ? !rbState.url : false;
+      }
+
+      document.querySelectorAll(".rb-dot").forEach(dot => {
+        const n = Number(dot.dataset.dot);
+        dot.classList.toggle("rb-dot-active", n === rbState.step);
+        dot.classList.toggle("rb-dot-done", n < rbState.step);
+      });
+    }
+
+    function rbGoToStep(step) {
+      rbState.step = step;
+      for (let n = 1; n <= RB_TOTAL_STEPS; n++) {
+        document.getElementById(`rbStep${n}`).hidden = n !== step;
+      }
+      rbUpdateFooter();
+    }
+
+    function rbOpen() {
+      rbPopulateUrlSelect();
+      const select = document.getElementById("rbUrlSelect");
+      rbState.url = select.value || "";
+      rbState.edits = [];
+      document.getElementById("rbReplaceInput").value = "";
+      rbRender();
+      rbGoToStep(1);
+      document.getElementById("regexBuilderOverlay").classList.add("rb-open");
+    }
+
+    function rbClose() {
+      document.getElementById("regexBuilderOverlay").classList.remove("rb-open");
+    }
+
+    document.getElementById("openRegexBuilderBtn").addEventListener("click", rbOpen);
+    document.getElementById("rbCloseBtn").addEventListener("click", rbClose);
+    document.getElementById("regexBuilderOverlay").addEventListener("click", e => {
+      if (e.target.id === "regexBuilderOverlay") rbClose();
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && document.getElementById("regexBuilderOverlay").classList.contains("rb-open")) {
+        rbClose();
+      }
+    });
+
+    document.getElementById("rbUrlSelect").addEventListener("change", e => {
+      rbState.url = e.target.value || "";
+      rbState.edits = [];
+      rbRender();
+    });
+
+    document.getElementById("rbRemoveBtn").addEventListener("click", () => {
+      const range = rbGetSelectionRange();
+      if (!range) return;
+      rbState.edits.push({ ...range, type: "remove", text: "" });
+      window.getSelection()?.removeAllRanges();
+      rbRender();
+    });
+
+    document.getElementById("rbReplaceBtn").addEventListener("click", () => {
+      const range = rbGetSelectionRange();
+      if (!range) return;
+      const text = document.getElementById("rbReplaceInput").value;
+      rbState.edits.push({ ...range, type: "replace", text });
+      window.getSelection()?.removeAllRanges();
+      document.getElementById("rbReplaceInput").value = "";
+      rbRender();
+    });
+
+    document.getElementById("rbUndoBtn").addEventListener("click", () => {
+      rbState.edits.pop();
+      rbRender();
+    });
+
+    document.getElementById("rbResetBtn").addEventListener("click", () => {
+      rbState.edits = [];
+      rbRender();
+    });
+
+    document.getElementById("rbBackBtn").addEventListener("click", () => {
+      if (rbState.step > 1) rbGoToStep(rbState.step - 1);
+    });
+
+    document.getElementById("rbNextBtn").addEventListener("click", () => {
+      if (rbState.step < RB_TOTAL_STEPS) {
+        rbGoToStep(rbState.step + 1);
+        return;
+      }
+
+      const rule = rbBuildRule();
+      if (!rule) return;
+      const defaultName = `Rewrite ${rewriteRules.length + 1}`;
+      const name = window.prompt("Name this rewrite rule:", defaultName);
+      if (name === null) return;
+      document.getElementById("regexRuleName").value = name.trim();
+      document.getElementById("regexPattern").value = rule.pattern;
+      document.getElementById("regexReplacement").value = rule.replacement;
+      addRewriteRule(rule.pattern, rule.replacement, name.trim());
+      rbClose();
+    });
+
+    document.getElementById("addRegexRuleBtn").addEventListener("click", () => {
+      addRewriteRule(
+        document.getElementById("regexPattern").value,
+        document.getElementById("regexReplacement").value,
+        document.getElementById("regexRuleName").value
+      );
+    });
+
+    renderRewriteRules();
+
+    document.getElementById("jsFile").addEventListener("change", e => {
+      jsFile = e.target.files[0];
+      document.getElementById("jsName").textContent = jsFile ? jsFile.name : "Choose a .js file";
+      updateButtons();
+    });
+
+    document.getElementById("mapFile").addEventListener("change", e => {
+      mapFile = e.target.files[0];
+      document.getElementById("mapName").textContent = mapFile ? mapFile.name : "Choose a .js.map file";
+      updateButtons();
+    });
+
+    document.getElementById("loadBtn").addEventListener("click", async () => {
+      if (jsFile && mapFile) {
+        try {
+          setStatus("Reading source map...");
+          var e = await mapFile.text();
+          parseAndLoadMapData(JSON.parse(e), mapFile.name);
+        } catch (e) {
+          console.error(e);
+          setStatus("Error loading source map: " + e.message);
+        }
+      } else {
+        setStatus("Please select both the JavaScript file and the source map.");
+      }
+    });
+
+    document.getElementById("downloadCurrentBtn").addEventListener("click", () => {
+      currentSource && null !== currentSource.content && downloadBlob(new Blob([currentSource.content], {
+        type: "text/plain;charset=utf-8"
+      }), cleanFilename(currentSource.name));
+    });
+
+    document.getElementById("downloadJsBtn").addEventListener("click", () => {
+      if (jsFile) {
+        downloadBlob(jsFile, jsFile.name);
+      }
+    });
+
+    document.getElementById("downloadMapBtn").addEventListener("click", () => {
+      if (mapFile) {
+        downloadBlob(mapFile, mapFile.name);
+      } else if (mapData) {
+        downloadBlob(new Blob([JSON.stringify(mapData, null, 2)], {
+          type: "application/json;charset=utf-8"
+        }), "scanned-sourcemap.map");
+      }
+    });
+
+    document.getElementById("downloadAllZipBtn").addEventListener("click", async () => {
+      if (!scanState.results.length) {
+        setStatus("No scanned results to download.");
+        return;
+      }
+
+      if (typeof JSZip === "undefined") {
+        setStatus("Couldn't load the ZIP library (JSZip) — check your internet connection and reload the page.");
+        return;
+      }
+
+      const zip = new JSZip();
+      const usedNames = new Set();
+      let fileCount = 0;
+      let failedCount = 0;
+
+      function uniqueZipName(name) {
+        name = cleanFilename(name) || "file.txt";
+        const dot = name.lastIndexOf(".");
+        const base = dot > 0 ? name.slice(0, dot) : name;
+        const ext = dot > 0 ? name.slice(dot) : "";
+
+        let candidate = name;
+        let i = 2;
+
+        while (usedNames.has(candidate.toLowerCase())) {
+          candidate = `${base}-${i++}${ext}`;
+        }
+
+        usedNames.add(candidate.toLowerCase());
+        return candidate;
+      }
+
+      function resultBaseName(url, fallback) {
+        try {
+          const u = new URL(url);
+          const name = u.pathname.split("/").pop() || fallback;
+          return cleanFilename(name);
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      setStatus(`Preparing ${scanState.results.length} scanned results...`);
+
+      for (let i = 0; i < scanState.results.length; i++) {
+        const item = scanState.results[i];
+        let mapObj = null;
+
+        if (!item.jsUrl || item.jsUrl.includes("#inline-script-")) {
+          if (item.commentMatch?.embedded) {
+            try {
+              mapObj = decodeDataMap(item.commentMatch.raw);
+            } catch (_) {
+              failedCount++;
+              continue;
+            }
+          } else {
+            continue;
+          }
+        } else {
+          mapObj = item.mapData || null;
+        }
+
+        if (!mapObj) continue;
+
+        const jsName = resultBaseName(item.jsUrl, `script-${i + 1}.js`);
+
+        setStatus(
+          `Extracting sources ${i + 1}/${scanState.results.length}: ${jsName}`
+        );
+
+        const flattenedSources = flattenSourceMap(mapObj);
+
+        for (let s = 0; s < flattenedSources.length; s++) {
+          const source = flattenedSources[s];
+
+          if (source.content === null || source.content === undefined) {
+            continue;
+          }
+
+          const sourceName = cleanFilename(
+            source.name || `source-${s + 1}.txt`
+          );
+
+          zip.file(uniqueZipName(sourceName), source.content);
+          fileCount++;
+        }
+      }
+
+      if (fileCount === 0) {
+        setStatus("No mapped source files with embedded content were found in the scanned results.");
+        return;
+      }
+
+      setStatus(`Creating ZIP with ${fileCount} files...`);
+
+      try {
+        const zipBlob = await zip.generateAsync({
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: { level: 6 }
+        });
+
+        downloadBlob(zipBlob, "all-mapped-sources.zip");
+
+        setStatus(
+          `Successfully downloaded ${fileCount} mapped source file(s) from ${scanState.results.length} scanned results` +
+          (failedCount ? ` (${failedCount} embedded map(s) could not be decoded).` : ".")
+        );
+      } catch (e) {
+        console.error(e);
+        setStatus("Failed creating ZIP: " + (e.message || e));
+      }
+    });
+
+    document.getElementById("saveReportBtn").addEventListener("click", () => {
+      if (!scanState.results.length) {
+        setStatus("No scanned results to save.");
+        return;
+      }
+
+      const totalJsFiles = scanState.results.length;
+      const mapComments = scanState.results.filter(x => x.commentMatch).length;
+      const validMaps = scanState.results.filter(x => x.commentValid || x.guessValid).length;
+      const fetchFailures = scanState.results.filter(x => x.error && !x.commentMatch).length;
+
+      const resultsList = scanState.results.map(item => {
+        let source = "none";
+        let validLink = null;
+
+        if (item.commentValid) {
+          source = "comment";
+          validLink = item.commentMatch ? item.commentMatch.url : null;
+        } else if (item.guessValid) {
+          source = "guessed";
+          validLink = item.guessUrl;
+        }
+
+        return {
+          jsUrl: item.jsUrl,
+          hasValidMap: item.commentValid || item.guessValid || item.compressedValid,
+          source: item.compressedValid ? "compressed-zlib" : source,
+          validLink: validLink,
+          guessedUrl: item.guessUrl,
+          commentMapUrl: item.commentMatch ? item.commentMatch.url : null,
+            compressedEncoding: item.compressedInfo?.encoding || null,
+            compressedPayload: item.compressedInfo?.encodedPayload || null,
+            decodedPayload: item.compressedInfo?.decodedText || null,
+            decodedUrls: item.decodedUrls || [],
+          error: item.error || null
+        };
+      });
+
+      const rawUrl = document.getElementById("scanUrl").value.trim();
+      const unixTimestamp = Math.floor(Date.now() / 1000);
+      
+      let urlPart = "scanned-site";
+      try {
+        const parsed = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : "https://" + rawUrl);
+        urlPart = (parsed.hostname + parsed.pathname)
+          .replace(/[^a-zA-Z0-9]/g, "_")
+          .replace(/^_+|_+$/g, "")
+          .replace(/_+/g, "_");
+      } catch (_) {}
+
+      const reportFileName = `${urlPart}_${unixTimestamp}.json`;
+
+      const reportData = {
+        scanDate: new Date().toISOString(),
+        unixTimestamp: unixTimestamp,
+        scannedUrl: rawUrl,
+        summary: {
+          jsFiles: totalJsFiles,
+          mapComments: mapComments,
+          validMaps: validMaps,
+          fetchFailures: fetchFailures
+        },
+        results: resultsList
+      };
+
+      const jsonBlob = new Blob([JSON.stringify(reportData, null, 2)], {
+        type: "application/json;charset=utf-8"
+      });
+
+      downloadBlob(jsonBlob, reportFileName);
+      setStatus(`Saved scan report as ${reportFileName}`);
+    });
+
+    document.getElementById("zipBtn").addEventListener("click", async () => {
+      if (typeof JSZip === "undefined") {
+        setStatus("Couldn't load the ZIP library (JSZip) — check your internet connection and reload the page.");
+        return;
+      }
+      if (sources.length) {
+        const o = new JSZip;
+        let t = 0;
+        for (const a of sources) {
+          var e;
+          null !== a.content && (e = cleanFilename(a.name), o.file(e, a.content), t++);
+        }
+        if (0 !== t) {
+          setStatus(`Creating ZIP containing ${t} source files...`);
+          var n = await o.generateAsync({
+            type: "blob"
+          });
+          let e = document.getElementById("zipNameInput").value.trim();
+          e ? e.endsWith(".zip") || (e += ".zip") : e = "source-map-sources.zip";
+          downloadBlob(n, e);
+          setStatus(`ZIP created with ${t} source files.`);
+        } else {
+          setStatus("No embedded sourceContent was found, so there is nothing to export.");
+        }
+      }
+    });
+
+    const scanState = {
+      running: false,
+      stop: false,
+      results: []
+    };
+
+    const $ = id => document.getElementById(id);
+
+    function normalizeUrl(raw) {
+      const value = raw.trim();
+      if (!value) throw new Error("Enter a URL first.");
+      return new URL(/^https?:\/\//i.test(value) ? value : "https://" + value);
+    }
+
+    function absoluteUrl(value, base) {
+      try {
+        return new URL(value, base).href;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function sourceMapFromComment(jsText, jsUrl) {
+      const re = /(?:\/\/\s*[#@]\s*sourceMappingURL\s*=\s*(.+?)(?=\s|$))|(?:\/\*\s*[#@]\s*sourceMappingURL\s*=\s*(.+?)(?:\s*\*\/|$))/gi;
+      const matches = [];
+      let m;
+
+      while ((m = re.exec(jsText))) {
+        const raw = (m[1] || m[2] || "").trim().replace(/^['"]|['"]$/g, '');
+        if (!raw) continue;
+
+        if (/^data:application\/json/i.test(raw)) {
+          matches.push({
+            url: jsUrl,
+            raw,
+            embedded: true,
+            index: m.index
+          });
+          continue;
+        }
+
+        const resolved = absoluteUrl(raw, jsUrl);
+        if (resolved) {
+          matches.push({
+            url: resolved,
+            raw,
+            embedded: false,
+            index: m.index
+          });
+        }
+      }
+
+      return matches;
+    }
+
+    async function fetchText(url, timeoutMs = 15000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const PROXY_URL = "https://cors-proxy2-nu.vercel.app/api/fetch";
+      try {
+        const proxy = `${PROXY_URL}?url=${encodeURIComponent(url)}`;
+
+        const response = await fetch(proxy, {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error(`Proxy HTTP ${response.status}`);
+        }
+
+        return await response.text();
+
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function extractScriptUrls(htmlText, pageUrl) {
+      const doc = new DOMParser().parseFromString(htmlText, "text/html");
+      return [...doc.querySelectorAll("script[src]")]
+        .map(script => absoluteUrl(script.getAttribute("src"), pageUrl))
+        .filter(Boolean);
+    }
+
+    function decodeDataMap(dataUrl) {
+      try {
+        const comma = dataUrl.indexOf(",");
+        if (comma < 0) return null;
+
+        const meta = dataUrl.slice(0, comma);
+        const data = dataUrl.slice(comma + 1);
+
+        if (/;base64/i.test(meta)) {
+          return JSON.parse(atob(data));
+        }
+
+        return JSON.parse(decodeURIComponent(data));
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // Some CDNs/optimizers encode asset lists directly into a URL as
+    // Base64 -> zlib/DEFLATE, commonly beginning with "eJx9".
+    // This is deliberately a fallback after normal source-map checks.
+    function getCompressedUrlPayload(url) {
+      try {
+        const parsed = new URL(url);
+        const match = parsed.search.match(/eJx9[A-Za-z0-9+/_=-]+/);
+        return match ? match[0] : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function looksLikeCompressedPayloadUrl(url) {
+      return !!getCompressedUrlPayload(url);
+    }
+
+    function base64ToBytes(value) {
+      const normalized = value
+        .replace(/-/g, "+")
+        .replace(/_/g, "/")
+        .replace(/[^A-Za-z0-9+/=]/g, "");
+      const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    async function inflateZlibBase64(value) {
+      const bytes = base64ToBytes(value);
+      if (
+        bytes.length < 2 ||
+        bytes[0] !== 0x78 ||
+        ![0x01, 0x5e, 0x9c, 0xda].includes(bytes[1])
+      ) {
+        throw new Error("Not a zlib/DEFLATE payload.");
+      }
+      if (typeof DecompressionStream !== "function") {
+        throw new Error("This browser does not support DecompressionStream.");
+      }
+      const stream = new Blob([bytes]).stream().pipeThrough(
+        new DecompressionStream("deflate")
+      );
+      const buffer = await new Response(stream).arrayBuffer();
+      return new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+    }
+
+    function isValidSourceMapObject(map) {
+      return !!map && map.version === 3 &&
+        (Array.isArray(map.sources) || Array.isArray(map.sections));
+    }
+
+    function extractUrlsFromDecodedPayload(payload, baseUrl) {
+      const urls = new Set();
+      const add = value => {
+        if (typeof value !== "string") return;
+        const cleaned = value.trim()
+          .replace(/^['"]|['"]$/g, "")
+          .replace(/[;,]+$/g, "");
+        if (!cleaned) return;
+        const absolute = absoluteUrl(cleaned, baseUrl);
+        if (absolute && (/^https?:/i.test(cleaned) || cleaned.startsWith("/"))) {
+          urls.add(absolute);
+        }
+      };
+
+      try {
+        const parsed = JSON.parse(payload);
+        if (isValidSourceMapObject(parsed)) return [];
+        if (Array.isArray(parsed)) parsed.forEach(add);
+        else if (typeof parsed === "string") add(parsed);
+        else if (parsed && typeof parsed === "object") {
+          Object.values(parsed).forEach(value => {
+            if (Array.isArray(value)) value.forEach(add);
+            else add(value);
+          });
+        }
+      } catch (_) {}
+
+      const matches = payload.match(
+        /https?:\/\/[^\s,;'"<>]+|\/(?:[^\s,;'"<>]+\.m?js(?:[?#][^\s,;'"<>]*)?)/gi
+      ) || [];
+      matches.forEach(add);
+      return [...urls];
+    }
+
+    async function decodeCompressedUrl(url, pageUrl) {
+      const encoded = getCompressedUrlPayload(url);
+      if (!encoded) return null;
+      const decodedText = await inflateZlibBase64(encoded);
+      let decodedMap = null;
+      try {
+        const parsed = JSON.parse(decodedText);
+        if (isValidSourceMapObject(parsed)) decodedMap = parsed;
+      } catch (_) {}
+      return {
+        encoding: "Base64 → zlib/DEFLATE",
+        encodedPayload: encoded,
+        decodedText,
+        decodedMap,
+        decodedUrls: decodedMap ? [] : extractUrlsFromDecodedPayload(decodedText, pageUrl || url)
+      };
+    }
+
+    async function loadScannedMapToViewer(item) {
+      try {
+        setStatus("Loading scanned source map into viewer...");
+        let mapObj = null;
+
+        if (item.imported && item.importedHasValidMap && item.importedMapUrl) {
+          const text = await fetchText(item.importedMapUrl);
+          mapObj = JSON.parse(text);
+        } else if (item.commentValid && item.commentMatch) {
+          if (item.commentMatch.embedded) {
+            mapObj = decodeDataMap(item.commentMatch.raw);
+          } else {
+            const text = await fetchText(item.commentMatch.url);
+            mapObj = JSON.parse(text);
+          }
+        } else if (item.guessValid) {
+          const text = await fetchText(item.guessUrl);
+          mapObj = JSON.parse(text);
+        } else if (item.compressedValid && item.compressedMapData) {
+          mapObj = item.compressedMapData;
+        }
+
+        if (mapObj) {
+          const mapName = item.jsUrl.split('/').pop() + ".map";
+          parseAndLoadMapData(mapObj, mapName);
+        } else {
+          setStatus("Could not load map data for this item.");
+        }
+      } catch (err) {
+        setStatus("Failed loading map into viewer: " + err.message);
+      }
+    }
+
+    function clearResults() {
+      scanState.results = [];
+      
+      const summaryBox = $("scanSummary");
+      summaryBox.hidden = true;
+      summaryBox.innerHTML = "";
+      
+      $("scanProgressText").textContent = "Ready to scan.";
+      $("clearContainer").hidden = true;
+      
+      renderScanResults();
+      updateButtons();
+      setStatus("Scan results cleared.");
+    }
+
+    function renderScanResults() {
+      const box = $("mapResults");
+      box.innerHTML = "";
+
+      if (!scanState.results.length) {
+        $("clearContainer").hidden = true;
+        box.innerHTML = `
+          <div class="scan-empty">
+            <p style="margin: 0;">No scan results yet or <label class="upload-link">upload a Report JSON (site report, or a JS-file list from the extension)<input id="reportFileInput" type="file" accept=".json,application/json" style="display: none;"></label></p>
+          </div>`;
+        attachReportFileInput();
+        return;
+      }
+
+      $("clearContainer").hidden = false;
+
+      const sorted = [...scanState.results].sort((a, b) => {
+        const score = x =>
+          (x.commentMatch ? 100 : 0) +
+          (x.commentValid ? 40 : 0) +
+          (x.guessValid ? 20 : 0) +
+          (x.mapHasSources ? 10 : 0);
+        return score(b) - score(a);
+      });
+
+      for (const item of sorted) {
+        const hasValidMap = item.imported
+          ? item.importedHasValidMap === true
+          : item.commentValid || item.guessValid;
+
+        const row = document.createElement("article");
+        row.className = "map-result" + (hasValidMap ? " good" : "");
+
+        const head = document.createElement("div");
+        head.className = "map-result-head";
+
+        const title = document.createElement("div");
+        title.className = "map-result-title";
+
+        const link = document.createElement("a");
+        link.href = item.jsUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = item.jsUrl;
+        title.appendChild(link);
+
+        const badge = document.createElement("span");
+        badge.className = "map-badge " + (hasValidMap ? "found" : "");
+
+        if (item.imported) {
+          if (item.importedHasValidMap) {
+            badge.textContent = "VALID MAP ✓";
+            badge.classList.add("found");
+          } else if (item.importedMapUrl) {
+            badge.textContent = "MAP URL FOUND";
+          } else {
+            badge.textContent = "NO MAP";
+          }
+        } else {
+          badge.textContent = item.commentValid
+            ? "COMMENT MAP ✓"
+            : item.guessValid
+              ? ".MAP FOUND"
+              : item.compressedValid
+                ? "DEFLATE MAP ✓"
+                : item.compressedInfo
+                  ? "ZLIB DECODED"
+                  : "NO MAP";
+          if (item.compressedValid || item.compressedInfo) badge.classList.add("found");
+        }
+
+        head.appendChild(title);
+        head.appendChild(badge);
+        row.appendChild(head);
+
+        const body = document.createElement("div");
+        body.className = "map-result-body";
+
+        const guessed = document.createElement("div");
+        if (item.imported) {
+          guessed.textContent = item.importedMapUrl
+            ? "Map URL: " + item.importedMapUrl
+            : "Map URL: none";
+        } else {
+          guessed.textContent = "Guessed: " + item.guessUrl;
+        }
+        body.appendChild(guessed);
+
+        if (item.imported) {
+          const sourceLine = document.createElement("div");
+          sourceLine.textContent = "Report source: " + (item.importedSource || "none");
+          body.appendChild(sourceLine);
+
+          if (item.importedMapUrl && !item.importedHasValidMap) {
+            const note = document.createElement("div");
+            note.className = "map-match";
+            note.textContent = "The imported report recorded a map URL, but marked the map as invalid/not usable. The URL is preserved without treating it as a valid map.";
+            body.appendChild(note);
+
+            const actionsDiv = document.createElement("div");
+            actionsDiv.className = "map-actions";
+
+            const openBtn = document.createElement("button");
+            openBtn.className = "small-btn";
+            openBtn.textContent = "↗ Open map URL";
+            openBtn.addEventListener("click", () => window.open(item.importedMapUrl, "_blank", "noopener,noreferrer"));
+            actionsDiv.appendChild(openBtn);
+            body.appendChild(actionsDiv);
+          }
+        }
+
+        if (item.commentMatch && !item.imported) {
+          const match = document.createElement("div");
+          match.className = "map-match";
+          match.innerHTML = "<strong>Source-map comment:</strong> ";
+          const code = document.createElement("code");
+          code.textContent = item.commentMatch.raw;
+          match.appendChild(code);
+          body.appendChild(match);
+
+          const resolved = document.createElement("div");
+          resolved.textContent = "Resolved map: " + item.commentMatch.url;
+          body.appendChild(resolved);
+        }
+
+        if (item.compressedInfo) {
+          const compressed = document.createElement("div");
+          compressed.className = "map-match";
+          compressed.textContent = `${item.compressedInfo.encoding} payload detected.`;
+          body.appendChild(compressed);
+
+          if (item.compressedInfo.decodedText != null) {
+            const decoded = document.createElement("details");
+            decoded.style.marginTop = "8px";
+            const summary = document.createElement("summary");
+            summary.textContent = item.compressedValid
+              ? "Decoded source-map payload"
+              : `Decoded payload (${item.decodedUrls?.length || 0} JS link(s))`;
+            decoded.appendChild(summary);
+            const pre = document.createElement("pre");
+            pre.style.whiteSpace = "pre-wrap";
+            pre.style.wordBreak = "break-word";
+            pre.style.maxHeight = "260px";
+            pre.style.overflow = "auto";
+            pre.textContent = item.compressedInfo.decodedText;
+            decoded.appendChild(pre);
+            body.appendChild(decoded);
+          }
+
+          if (item.decodedUrls?.length) {
+            const links = document.createElement("div");
+            links.className = "map-match";
+            links.textContent = `Decoded JS links: ${item.decodedUrls.length}. They will be scanned normally.`;
+            body.appendChild(links);
+          }
+
+          if (item.compressedInfo.error) {
+            const error = document.createElement("div");
+            error.className = "map-error";
+            error.textContent = "Compressed payload error: " + item.compressedInfo.error;
+            body.appendChild(error);
+          }
+        }
+
+        if (hasValidMap || item.compressedValid) {
+          const detail = document.createElement("div");
+          detail.className = "map-match";
+          const sourceCountStr = item.mapSources != null ? ` • ${item.mapSources} sources` : "";
+          detail.textContent = item.commentValid
+            ? `Comment map is valid${sourceCountStr}.`
+            : `Guessed .map is valid${sourceCountStr}.`;
+          body.appendChild(detail);
+
+          const actionsDiv = document.createElement("div");
+          actionsDiv.className = "map-actions";
+
+          const loadBtn = document.createElement("button");
+          loadBtn.className = "small-btn";
+          loadBtn.textContent = "⚡ Load into Viewer";
+          loadBtn.addEventListener("click", () => loadScannedMapToViewer(item));
+          actionsDiv.appendChild(loadBtn);
+
+          body.appendChild(actionsDiv);
+        } else if (item.error) {
+          const error = document.createElement("div");
+          error.className = "map-error";
+          error.textContent = item.error;
+          body.appendChild(error);
+        }
+
+        row.appendChild(body);
+        box.appendChild(row);
+      }
+    }
+
+    function updateScanSummary(total, comments, validMaps, failures) {
+      $("scanSummary").hidden = false;
+      $("scanSummary").innerHTML = `
+        <div class="scan-stat"><b>${total}</b><span>JS files</span></div>
+        <div class="scan-stat"><b>${comments}</b><span>Map comments</span></div>
+        <div class="scan-stat"><b>${validMaps}</b><span>Valid maps</span></div>
+        <div class="scan-stat"><b>${failures}</b><span>Fetch failures</span></div>
+      `;
+    }
+
+    async function scanOneJs(rawJsUrl, pageUrl) {
+      const jsUrl = applyUrlRewrite(rawJsUrl);
+      const guessUrl = applyUrlRewrite(jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map"));
+
+      const result = {
+        jsUrl,
+        guessUrl,
+        commentMatch: null,
+        commentValid: false,
+        guessValid: false,
+        compressedValid: false,
+        compressedMapData: null,
+        compressedInfo: null,
+        decodedUrls: [],
+        mapSources: null,
+        mapData: null,
+        error: ""
+      };
+
+      try {
+        const jsText = await fetchText(jsUrl);
+        const comments = sourceMapFromComment(jsText, jsUrl);
+
+        if (comments.length) {
+          result.commentMatch = comments[comments.length - 1];
+
+          if (result.commentMatch.embedded) {
+            const map = decodeDataMap(result.commentMatch.raw);
+            result.commentValid = !!map;
+            result.mapData = map || null;
+            result.mapSources = getMapSourceCount(map);
+          } else {
+            result.commentMatch.url = applyUrlRewrite(result.commentMatch.url);
+            try {
+              const mapText = await fetchText(result.commentMatch.url);
+              const map = JSON.parse(mapText);
+              result.commentValid = !!map && (map.version === 3 && (Array.isArray(map.sources) || Array.isArray(map.sections)));
+              result.mapData = result.commentValid ? map : null;
+              result.mapSources = getMapSourceCount(map);
+            } catch (_) {
+              result.commentValid = false;
+            }
+          }
+        }
+
+        // Only fall back to the guessed .js.map when the comment-referenced
+        // map wasn't already valid. Some sites serve a stripped/no-content
+        // map at the plain guessed path (for error-tracking tools) while the
+        // comment-linked one has the real sourcesContent — always trying
+        // the guess and letting it win on success used to silently clobber
+        // a good map with a content-less one.
+        if (!result.commentValid) {
+          try {
+            const mapText = await fetchText(result.guessUrl);
+            const map = JSON.parse(mapText);
+            result.guessValid = isValidSourceMapObject(map);
+            if (result.guessValid) {
+              result.mapData = map;
+            }
+            if (result.guessValid && result.mapSources == null) {
+              result.mapSources = getMapSourceCount(map);
+            }
+          } catch (_) {}
+        }
+
+        // Normal comment and guessed .map checks always run first. Only then
+        // inspect a URL that contains a zlib-wrapped Base64 payload.
+        if (!result.commentValid && !result.guessValid && looksLikeCompressedPayloadUrl(jsUrl)) {
+          try {
+            result.compressedInfo = await decodeCompressedUrl(jsUrl, pageUrl);
+            result.decodedUrls = result.compressedInfo.decodedUrls || [];
+            if (result.compressedInfo.decodedMap) {
+              result.compressedValid = true;
+              result.compressedMapData = result.compressedInfo.decodedMap;
+              result.mapData = result.compressedMapData;
+              result.mapSources = getMapSourceCount(result.compressedMapData);
+            }
+          } catch (e) {
+            result.compressedInfo = {
+              encoding: "Base64 → zlib/DEFLATE",
+              encodedPayload: getCompressedUrlPayload(jsUrl),
+              decodedText: null,
+              decodedMap: null,
+              decodedUrls: [],
+              error: e.message || String(e)
+            };
+          }
+        }
+
+        if (!result.commentMatch && !result.guessValid && !result.compressedValid) {
+          result.error = result.compressedInfo?.error
+            ? `No usable source map found. Compressed payload detected but could not be decoded: ${result.compressedInfo.error}`
+            : "No usable source map found.";
+        }
+      } catch (e) {
+        result.error = `Could not fetch JS: ${e.message || e}`;
+      }
+
+      return result;
+    }
+
+    // Shared worker loop: checks each URL in `urls` for a source map,
+    // appending to scanState.results and updating the UI as it goes. Used
+    // both by a normal scan (after discovering script URLs from the page)
+    // and by importing a JS-file-list report (e.g. from the extension),
+    // which already has its URL list and just needs this checking pass.
+    async function checkUrlsForMaps(urls, pageUrlHref, { seenUrls, sameOrigin, statusPrefix = "" } = {}) {
+      seenUrls = seenUrls || new Set(urls);
+      const concurrency = 4;
+      let next = 0;
+
+      async function worker() {
+        while (!scanState.stop) {
+          const index = next++;
+
+          if (index >= urls.length) return;
+
+          const jsUrl = urls[index];
+
+          $("scanProgressText").textContent =
+            `${statusPrefix}Checking ${index + 1}/${urls.length}: ${jsUrl}`;
+
+          const result =
+            await scanOneJs(jsUrl, pageUrlHref);
+
+          scanState.results.push(result);
+
+          // Unpacked optimizer assets re-enter the normal scanner pipeline.
+          if (Array.isArray(result.decodedUrls)) {
+            for (const decodedUrl of result.decodedUrls) {
+              if (scanState.stop) break;
+              if (sameOrigin) {
+                try {
+                  if (new URL(decodedUrl).origin !== new URL(pageUrlHref).origin) continue;
+                } catch (_) {
+                  continue;
+                }
+              }
+              if (!seenUrls.has(decodedUrl)) {
+                seenUrls.add(decodedUrl);
+                urls.push(decodedUrl);
+              }
+            }
+          }
+
+          renderScanResults();
+          updateButtons();
+
+          const total =
+            scanState.results.length;
+
+          const comments =
+            scanState.results.filter(
+              x => x.commentMatch
+            ).length;
+
+          const validMaps =
+            scanState.results.filter(
+              x => x.commentValid || x.guessValid
+            ).length;
+
+          const failures =
+            scanState.results.filter(
+              x => x.error && !x.commentMatch
+            ).length;
+
+          updateScanSummary(
+            total,
+            comments,
+            validMaps,
+            failures
+          );
+        }
+      }
+
+      await Promise.all(
+        Array.from(
+          {
+            length:
+              Math.min(
+                concurrency,
+                urls.length || 1
+              )
+          },
+          worker
+        )
+      );
+    }
+
+    // Runs the map-checking pass on a JS file list that arrived from an
+    // uploaded Report JSON (e.g. exported by the JS File Scanner extension)
+    // rather than being discovered by fetching the page's HTML here. This
+    // picks up right where that extension left off.
+    async function runImportedFileListScan(urls, scannedUrlRaw) {
+      if (scanState.running) return;
+
+      let pageUrlHref;
+      try {
+        pageUrlHref = scannedUrlRaw ? normalizeUrl(scannedUrlRaw).href : (urls[0] || location.href);
+      } catch (_) {
+        pageUrlHref = urls[0] || location.href;
+      }
+
+      const sameOrigin = $("sameOriginOnly").checked;
+
+      scanState.running = true;
+      scanState.stop = false;
+      scanState.results = [];
+
+      $("scanBtn").disabled = true;
+      $("stopScanBtn").disabled = false;
+      $("scanSummary").hidden = true;
+      $("clearContainer").hidden = true;
+      $("mapResults").innerHTML =
+        '<div class="scan-empty">Checking imported JS files for source maps...</div>';
+
+      try {
+        let filteredUrls = [...new Set(urls.filter(u => /^https?:\/\//i.test(u)))];
+
+        if (sameOrigin) {
+          filteredUrls = filteredUrls.filter(url => {
+            try {
+              return new URL(url).origin === new URL(pageUrlHref).origin;
+            } catch (_) {
+              return false;
+            }
+          });
+        }
+
+        updateButtons();
+        $("scanProgressText").textContent =
+          `Loaded ${filteredUrls.length} JS file URL(s) from extension report. Checking maps...`;
+
+        await checkUrlsForMaps(filteredUrls, pageUrlHref, { sameOrigin, statusPrefix: "Imported list: " });
+
+        $("scanProgressText").textContent = scanState.stop
+          ? "Scan stopped."
+          : `Finished. Checked ${filteredUrls.length} JS file(s) from the imported list.`;
+      } catch (e) {
+        console.error(e);
+        $("scanProgressText").textContent = `Scan failed: ${e.message || e}.`;
+      } finally {
+        scanState.running = false;
+        $("scanBtn").disabled = false;
+        $("stopScanBtn").disabled = true;
+      }
+    }
+
+    async function runSiteScan() {
+      if (scanState.running) return;
+
+      let pageUrl;
+      try {
+        pageUrl = normalizeUrl($("scanUrl").value);
+      } catch (e) {
+        $("scanProgressText").textContent = e.message;
+        return;
+      }
+
+      const deepBrowserScan = $("deepBrowserScan").checked;
+
+      scanState.running = true;
+      scanState.stop = false;
+      scanState.results = [];
+
+      $("scanBtn").disabled = true;
+      $("stopScanBtn").disabled = false;
+      $("scanSummary").hidden = true;
+      $("clearContainer").hidden = true;
+
+      $("mapResults").innerHTML =
+        '<div class="scan-empty">Starting scan...</div>';
+
+      try {
+        const sameOrigin = $("sameOriginOnly").checked;
+
+        let pageHtml = "";
+        let scriptUrls = [];
+
+        $("scanProgressText").textContent = deepBrowserScan
+          ? "Starting deep browser scan... This can take a little longer."
+          : "Fetching page HTML...";
+
+        pageHtml = await fetchText(pageUrl.href);
+
+        const staticScriptUrls =
+          extractScriptUrls(pageHtml, pageUrl.href);
+
+        scriptUrls.push(...staticScriptUrls);
+
+        if (deepBrowserScan) {
+          const PROXY_BASE =
+            "https://cors-proxy2-nu.vercel.app";
+
+          const discoverUrl =
+            `${PROXY_BASE}/api/discover?url=` +
+            encodeURIComponent(pageUrl.href);
+
+          $("scanProgressText").textContent =
+            "Deep browser scan: loading page and capturing runtime JavaScript...";
+
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 70000);
+
+          try {
+            const response = await fetch(discoverUrl, {
+              method: "GET",
+              cache: "no-store",
+              signal: controller.signal
+            });
+
+            let data;
+
+            try {
+              data = await response.json();
+            } catch (_) {
+              throw new Error(
+                `Browser discovery returned HTTP ${response.status} with an invalid response.`
+              );
+            }
+
+            if (!response.ok || !data.ok) {
+              throw new Error(
+                data?.message ||
+                data?.error ||
+                `Browser discovery failed with HTTP ${response.status}.`
+              );
+            }
+
+            const runtimeUrls = Array.isArray(data.jsFiles)
+              ? data.jsFiles
+                  .map(file =>
+                    typeof file === "string" ? file : file?.url
+                  )
+                  .filter(Boolean)
+              : [];
+
+            scriptUrls.push(...runtimeUrls);
+
+            $("scanProgressText").textContent =
+              `Deep browser scan found ${runtimeUrls.length} runtime JavaScript request(s). Combining with static scripts...`;
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+
+        let urls = [...new Set(
+          scriptUrls.filter(url =>
+            /^https?:\/\//i.test(url)
+          )
+        )];
+
+        if (!deepBrowserScan) {
+          urls = urls.filter(url =>
+            /\.m?js(?:[?#].*)?$/i.test(url) ||
+            looksLikeCompressedPayloadUrl(url)
+          );
+        }
+
+        if (sameOrigin) {
+          urls = urls.filter(url => {
+            try {
+              return new URL(url).origin === pageUrl.origin;
+            } catch (_) {
+              return false;
+            }
+          });
+        }
+
+        const seenUrls = new Set(urls);
+
+        if ($("scanInline").checked) {
+          const doc =
+            new DOMParser().parseFromString(pageHtml, "text/html");
+
+          const inline = [
+            ...doc.querySelectorAll("script:not([src])")
+          ]
+            .map((s, i) => ({
+              url:
+                pageUrl.href +
+                "#inline-script-" +
+                (i + 1),
+              text: s.textContent || ""
+            }))
+            .filter(x =>
+              /sourceMappingURL\s*=/.test(x.text)
+            );
+
+          for (const x of inline) {
+            if (scanState.stop) break;
+
+            const comments =
+              sourceMapFromComment(x.text, pageUrl.href);
+
+            scanState.results.push({
+              jsUrl: x.url,
+              guessUrl: "n/a (inline script)",
+              commentMatch:
+                comments[comments.length - 1] || null,
+              commentValid: false,
+              guessValid: false,
+              mapSources: null,
+              mapData: null,
+              error: "Inline script: source-map comment found."
+            });
+
+            const last =
+              scanState.results[
+                scanState.results.length - 1
+              ];
+
+            if (last.commentMatch?.embedded) {
+              const map =
+                decodeDataMap(last.commentMatch.raw);
+
+              last.commentValid = !!map;
+              last.mapData = map || null;
+              last.mapSources =
+                getMapSourceCount(map);
+              last.error = last.commentValid
+                ? ""
+                : "Invalid embedded source map.";
+            } else if (last.commentMatch?.url) {
+              try {
+                const commentMapUrl = applyUrlRewrite(last.commentMatch.url);
+                last.commentMatch.url = commentMapUrl;
+                const mapText =
+                  await fetchText(commentMapUrl);
+
+                const map = JSON.parse(mapText);
+
+                last.commentValid =
+                  !!map &&
+                  map.version === 3 &&
+                  (
+                    Array.isArray(map.sources) ||
+                    Array.isArray(map.sections)
+                  );
+
+                last.mapData =
+                  last.commentValid ? map : null;
+
+                last.mapSources =
+                  last.commentValid
+                    ? getMapSourceCount(map)
+                    : null;
+
+                last.error =
+                  last.commentValid
+                    ? ""
+                    : "Referenced file is not a valid source map.";
+              } catch (e) {
+                last.error =
+                  "Could not fetch referenced inline-script map.";
+              }
+            }
+          }
+        }
+
+        updateButtons();
+
+        $("scanProgressText").textContent =
+          `Found ${urls.length} unique JavaScript file(s). Checking maps...`;
+
+        await checkUrlsForMaps(urls, pageUrl.href, { seenUrls, sameOrigin });
+
+        if (scanState.stop) {
+          $("scanProgressText").textContent =
+            "Scan stopped.";
+        } else {
+          $("scanProgressText").textContent =
+            `Finished. Checked ${urls.length} unique JavaScript file(s)` +
+            (deepBrowserScan
+              ? " using deep browser discovery."
+              : ".");
+        }
+      } catch (e) {
+        console.error(e);
+
+        $("scanProgressText").textContent =
+          `Scan failed: ${e.message || e}.`;
+      } finally {
+        scanState.running = false;
+        $("scanBtn").disabled = false;
+        $("stopScanBtn").disabled = true;
+      }
+    }
+
+    function reportLog(...args) {
+      console.log("[Report JSON]", ...args);
+    }
+
+    function reportWarn(...args) {
+      console.warn("[Report JSON]", ...args);
+    }
+
+    function reportError(...args) {
+      console.error("[Report JSON]", ...args);
+    }
+
+    function normalizeImportedJsUrls(value) {
+      if (!Array.isArray(value)) return [];
+      return value.map(item => {
+        if (typeof item === "string") return item.trim();
+        if (!item || typeof item !== "object") return null;
+        return String(item.jsUrl || item.url || item.src || item.href || "").trim();
+      }).filter(url => /^https?:\/\//i.test(url));
+    }
+
+    function isSourceMapReport(data) {
+      return !!data && Array.isArray(data.results) && data.results.some(item =>
+        item && typeof item === "object" &&
+        ("jsUrl" in item || "hasValidMap" in item || "source" in item || "mapUrl" in item || "mapSources" in item || "error" in item)
+      );
+    }
+
+    function isJsFileListReport(data) {
+      return !!data && Array.isArray(data.jsFiles) && (
+        data.reportType === "js-file-list" || !isSourceMapReport(data)
+      );
+    }
+
+    function convertImportedResult(item, index) {
+      const jsUrl = String(item.jsUrl || item.url || item.src || "").trim();
+      const source = String(item.source || "").toLowerCase();
+      const hasValidMap = item.hasValidMap === true || item.valid === true;
+      const mapUrl = item.mapUrl || item.commentMapUrl || item.guessedUrl || null;
+      const commentValid = item.commentValid === true || source === "comment";
+      const guessValid = item.guessValid === true || source === "guessed";
+      const compressedValid = item.compressedValid === true || source === "compressed-zlib";
+
+      return {
+        jsUrl,
+        // Keep the candidate URL separate from validity/source.
+        guessUrl: item.guessedUrl || item.mapUrl || (jsUrl ? jsUrl.replace(/\?.*$/, "").replace(/\.js$/i, ".js.map") : ""),
+        commentMatch: commentValid && mapUrl ? {
+          url: mapUrl,
+          raw: mapUrl,
+          embedded: typeof mapUrl === "string" && mapUrl.startsWith("data:")
+        } : null,
+        commentValid,
+        guessValid: guessValid || (hasValidMap && source === "guessed"),
+        compressedValid,
+        compressedMapData: item.compressedMapData || null,
+        compressedInfo: item.compressedEncoding ? {
+          encoding: item.compressedEncoding,
+          encodedPayload: item.compressedPayload || null,
+          decodedText: item.decodedPayload || null,
+          decodedMap: null,
+          decodedUrls: normalizeImportedJsUrls(item.decodedUrls)
+        } : null,
+        decodedUrls: normalizeImportedJsUrls(item.decodedUrls),
+        mapSources: Number.isFinite(item.mapSources) ? item.mapSources : null,
+        mapData: item.mapData || null,
+        error: item.error || "",
+        importedHasValidMap: hasValidMap,
+        importedSource: source,
+        importedMapUrl: mapUrl
+      };
+    }
+
+    function attachReportFileInput() {
+      const input = document.getElementById("reportFileInput");
+      if (!input || input.dataset.reportHandlerAttached === "1") return;
+      input.dataset.reportHandlerAttached = "1";
+
+      input.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        reportLog("File input change fired", { file: file ? { name: file.name, size: file.size, type: file.type } : null });
+        if (!file) return;
+
+        try {
+          setStatus("Loading scan report JSON...");
+          reportLog("Reading file...");
+
+          const text = await file.text();
+          reportLog("File read successfully", { bytes: text.length, firstChars: text.slice(0, 120) });
+
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            reportError("JSON.parse failed", parseError);
+            throw new Error(`Invalid JSON: ${parseError.message}`);
+          }
+
+          reportLog("Parsed JSON root", {
+            type: Array.isArray(data) ? "array" : typeof data,
+            keys: data && typeof data === "object" ? Object.keys(data) : []
+          });
+
+          if (!data || typeof data !== "object" || Array.isArray(data)) {
+            throw new Error("Invalid report: root must be a JSON object.");
+          }
+
+          const hasResults = Array.isArray(data.results);
+          const hasJsFiles = Array.isArray(data.jsFiles);
+          reportLog("Detected report fields", {
+            reportType: data.reportType,
+            hasResults,
+            resultsCount: hasResults ? data.results.length : 0,
+            hasJsFiles,
+            jsFilesCount: hasJsFiles ? data.jsFiles.length : 0,
+            scannedUrl: data.scannedUrl
+          });
+
+          if (!hasResults && !hasJsFiles) {
+            throw new Error("Unsupported report: no 'results' or 'jsFiles' array found.");
+          }
+
+          const scanUrl = document.getElementById("scanUrl");
+          if (scanUrl && data.scannedUrl) scanUrl.value = data.scannedUrl;
+
+          if (isJsFileListReport(data)) {
+            const urls = normalizeImportedJsUrls(data.jsFiles);
+            reportLog("Detected JS-file-list report", { validUrls: urls.length, firstUrls: urls.slice(0, 5) });
+            if (!urls.length) throw new Error("JS-file-list report contains no valid http(s) JavaScript URLs.");
+
+            input.value = "";
+            await runImportedFileListScan(urls, data.scannedUrl);
+            reportLog("JS-file-list import completed", { results: scanState.results.length });
+            return;
+          }
+
+          if (!hasResults) throw new Error("Source-map report does not contain a results array.");
+
+          reportLog("Converting source-map results...");
+          const normalized = data.results
+            .filter(item => item && typeof item === "object")
+            .map(convertImportedResult)
+            .filter(item => item.jsUrl);
+
+          reportLog("Converted source-map results", {
+            inputCount: data.results.length,
+            outputCount: normalized.length,
+            validMaps: normalized.filter(x => x.importedHasValidMap).length,
+            comments: normalized.filter(x => x.commentValid).length,
+            guessed: normalized.filter(x => x.guessValid).length,
+            errors: normalized.filter(x => x.error).length
+          });
+
+          if (!normalized.length) throw new Error("The report results array was found, but contained no usable jsUrl values.");
+
+          scanState.results = normalized;
+          renderScanResults();
+          updateButtons();
+
+          const rawSummary = data.summary && typeof data.summary === "object" ? data.summary : {};
+          updateScanSummary(
+            Number.isFinite(rawSummary.jsFiles) ? rawSummary.jsFiles : normalized.length,
+            Number.isFinite(rawSummary.mapComments) ? rawSummary.mapComments : normalized.filter(x => x.commentValid).length,
+            Number.isFinite(rawSummary.validMaps) ? rawSummary.validMaps : normalized.filter(x => x.importedHasValidMap || x.commentValid || x.guessValid || x.compressedValid).length,
+            Number.isFinite(rawSummary.fetchFailures) ? rawSummary.fetchFailures : normalized.filter(x => x.error).length
+          );
+
+          input.value = "";
+          setStatus(`Successfully loaded report from ${file.name}`);
+          reportLog("Source-map report import completed successfully.");
+        } catch (err) {
+          reportError("IMPORT FAILED", err);
+          reportError("Failure details", { name: err.name, message: err.message, stack: err.stack });
+          setStatus("Failed to load report: " + (err.message || err));
+          input.value = "";
+        }
+      });
+    }
+
+    attachReportFileInput();
+
+    $("scanBtn").addEventListener("click", runSiteScan);
+
+    $("stopScanBtn").addEventListener("click", () => {
+      scanState.stop = true;
+      $("scanProgressText").textContent = "Stopping after the current request...";
+    });
+
+    $("scanUrl").addEventListener("keydown", e => {
+      if (e.key === "Enter") runSiteScan();
+    });
+
+    $("clearResultsBtn").addEventListener("click", clearResults);
+
+    $("toggleScannerBtn").addEventListener("click", () => {
+      const section = $("autoScanSection");
+      const isCollapsed = section.classList.toggle("collapsed");
+      $("toggleScannerText").textContent = isCollapsed ? "Expand" : "Collapse";
+    });
+  </script>
+</body></html>
